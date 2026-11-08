@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vetwise — household pet safety over MCP</title>
+    <meta
+      name="description"
+      content="Vetwise is a self-hosted MCP server for pet toxicosis and medication safety, demonstrated through a browser-based household simulator."
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230d1f1a'/%3E%3Cpath d='M12 4 18 6.3v4.6c0 3.4-2.4 5.9-6 7.3-3.6-1.4-6-3.9-6-7.3V6.3L12 4Z' fill='%238fe3bd'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 2.6 20 5.5v6.2c0 4.6-3.2 8-8 9.8-4.8-1.8-8-5.2-8-9.8V5.5l8-2.9Z"
+                stroke="currentColor"
+                stroke-width="1.4"
+                stroke-linejoin="round"
+              />
+              <circle cx="9.2" cy="10" r="1.12" fill="currentColor" />
+              <circle cx="14.8" cy="10" r="1.12" fill="currentColor" />
+              <circle cx="7.5" cy="13" r="1.02" fill="currentColor" />
+              <circle cx="16.5" cy="13" r="1.02" fill="currentColor" />
+              <path
+                d="M9.4 15.2c.7-1.2 1.6-1.8 2.6-1.8s1.9.6 2.6 1.8c.6 1-.1 2.1-1.4 2.1h-2.4c-1.3 0-2-1.1-1.4-2.1Z"
+                fill="currentColor"
+              />
+            </svg>
+          </span>
+          <div>
+            <h1>Vetwise</h1>
+            <p>Pet toxicosis &amp; medication safety, grounded in the household record</p>
+          </div>
+        </div>
+
+        <div class="top-meta">
+          <div class="clock-chip" title="The demo clock is frozen so every recording tells the same story">
+            <span id="clock">—</span>
+            <small id="clock-note">demo clock</small>
+          </div>
+          <label class="identity">
+            <span>Signed in as</span>
+            <select id="token-select">
+              <option value="maya-owner-demo-token">Maya Chen — owner</option>
+              <option value="noah-sitter-demo-token">Noah Patel — pet sitter</option>
+            </select>
+          </label>
+          <button id="mute" class="ghost-button" type="button" aria-pressed="false" title="Toggle spoken replies">
+            <span id="mute-icon">🔇</span><span class="sr-only">Toggle voice</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <!-- ------------------------------------------------ left rail -->
+        <aside class="rail rail-left" aria-label="Household">
+          <section class="card pets-card">
+            <header class="card-head">
+              <h3>Household</h3>
+              <span class="pill" id="pets-pill">—</span>
+            </header>
+            <p class="card-note" id="household-note">The Chen–Patel house · Sacramento, CA</p>
+            <ul id="pets" class="pet-list"></ul>
+          </section>
+
+          <section class="card tonight-card">
+            <header class="card-head">
+              <h3>Tonight</h3>
+              <span class="pill" id="tonight-pill">—</span>
+            </header>
+            <ul id="tonight" class="dose-list"></ul>
+            <div id="prn-wrap" class="prn-wrap" hidden>
+              <p class="mini-head">As needed</p>
+              <ul id="prn" class="prn-list"></ul>
+            </div>
+          </section>
+
+          <section class="card call-card">
+            <header class="card-head">
+              <h3>Call list</h3>
+              <span class="pill subtle">24/7</span>
+            </header>
+            <ul id="call-list" class="call-list"></ul>
+            <p class="card-note">
+              Vetwise never advises inducing vomiting or any home treatment. It names the number and gets out of the way.
+            </p>
+          </section>
+        </aside>
+
+        <!-- ------------------------------------------------ stage -->
+        <section class="stage" aria-label="Conversation">
+          <header class="stage-head">
+            <div class="stage-orb" id="orb" aria-hidden="true"><span></span></div>
+            <div class="stage-title">
+              <h2>Ask about Mochi &amp; Juniper</h2>
+              <p id="agent-badge" class="badge">connecting…</p>
+            </div>
+            <div id="scope-chips" class="scope-chips"></div>
+          </header>
+
+          <div id="transcript" class="transcript" aria-live="polite"></div>
+
+          <div class="suggestions" id="suggestions">
+            <button type="button" data-say="What's due tonight?">What’s due tonight?</button>
+            <button type="button" data-say="Mochi got into my 65% dark chocolate. She ate about 40 grams.">
+              Mochi ate dark chocolate
+            </button>
+            <button type="button" data-say="Now she's drooling and shaky.">Now she’s drooling</button>
+            <button type="button" data-say="Text Maya the summary.">Text Maya</button>
+            <button type="button" data-say="Give Mochi his gabapentin.">Log gabapentin</button>
+            <button type="button" data-say="Stop Mochi's carprofen — the vet said to.">Propose a record change</button>
+          </div>
+
+          <form class="composer" id="composer">
+            <button type="button" id="mic" class="mic" aria-label="Speak" title="Speak">
+              <span class="mic-glyph" aria-hidden="true">🎙</span>
+            </button>
+            <input
+              id="message"
+              name="message"
+              type="text"
+              autocomplete="off"
+              placeholder="Try “Mochi ate 40 g of dark chocolate” or “what’s due tonight?”"
+              aria-label="Message"
+            />
+            <button type="submit" id="send" class="send">Ask</button>
+          </form>
+
+          <p class="disclaimer">
+            Demo household, real veterinary sources. Vetwise is a triage aid, not a diagnosis, and it never changes a
+            record without an explicit yes. Emergency: ASPCA APCC <a href="tel:+18884264435">(888) 426-4435</a>.
+          </p>
+        </section>
+
+        <!-- ------------------------------------------------ right rail -->
+        <aside class="rail rail-right" aria-label="Assessment and protocol traffic">
+          <section class="card assessment-card" id="assessment-card">
+            <header class="card-head">
+              <h3>Latest assessment</h3>
+              <span class="verdict-pill" id="verdict-pill">—</span>
+            </header>
+            <div id="assessment" class="assessment">
+              <p class="empty">No exposure assessed yet. Ask what a pet ate, and the verdict, dose math and cited evidence land here.</p>
+            </div>
+          </section>
+
+          <section class="card exposures-card">
+            <header class="card-head">
+              <h3>Exposure log</h3>
+              <span class="pill" id="exposure-count">0</span>
+            </header>
+            <ol id="exposures" class="exposure-list"></ol>
+          </section>
+
+          <section class="card traffic-card">
+            <header class="card-head">
+              <h3>MCP traffic</h3>
+              <span class="pill" id="traffic-count">0</span>
+            </header>
+            <p class="card-note">JSON-RPC over Streamable HTTP to <code>/mcp</code>. Every spoken answer has a matching call.</p>
+            <ol id="traffic" class="traffic"></ol>
+          </section>
+        </aside>
+      </main>
+
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
