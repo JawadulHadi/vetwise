@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="340" viewBox="0 0 1280 340" role="img" aria-label="Vetwise — household pet toxicosis and medication safety, over MCP">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0F2A24"/>
+      <stop offset="0.55" stop-color="#0B2320"/>
+      <stop offset="1" stop-color="#081A17"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.18" cy="0.1" r="0.75">
+      <stop offset="0" stop-color="#8FE3BD" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#8FE3BD" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="paw" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A8F0D2"/>
+      <stop offset="1" stop-color="#6FCFAA"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="340" fill="url(#bg)"/>
+  <rect width="1280" height="340" fill="url(#glow)"/>
+  <rect x="0" y="338" width="1280" height="2" fill="#1D4B3F"/>
+
+  <!-- mark -->
+  <g transform="translate(88 74) scale(0.75)">
+    <rect width="256" height="256" rx="56" fill="#0D2620"/>
+    <rect x="8" y="8" width="240" height="240" rx="49" fill="none" stroke="#2A5B4B" stroke-width="2"/>
+    <path d="M128 34c22 12 42 17 60 18v66c0 44-25 78-60 96-35-18-60-52-60-96V52c18-1 38-6 60-18z"
+          fill="none" stroke="#3E7F6B" stroke-width="6" stroke-linejoin="round" opacity="0.7"/>
+    <g fill="url(#paw)">
+      <ellipse cx="99" cy="98" rx="15" ry="18" transform="rotate(-20 99 98)"/>
+      <ellipse cx="157" cy="98" rx="15" ry="18" transform="rotate(20 157 98)"/>
+      <ellipse cx="78" cy="131" rx="13" ry="15" transform="rotate(-38 78 131)"/>
+      <ellipse cx="178" cy="131" rx="13" ry="15" transform="rotate(38 178 131)"/>
+      <path d="M128 116c22 0 39 15 39 34 0 15-11 24-24 24-6 0-10-2-15-2s-9 2-15 2c-13 0-24-9-24-24 0-19 17-34 39-34z"/>
+    </g>
+    <g transform="translate(186 176)">
+      <circle r="26" fill="#F2705A"/>
+      <rect x="-4" y="-13" width="8" height="26" rx="3" fill="#0A1F1A"/>
+      <rect x="-13" y="-4" width="26" height="8" rx="3" fill="#0A1F1A"/>
+    </g>
+  </g>
+
+  <!-- wordmark -->
+  <text x="300" y="150" font-family="Georgia, 'Times New Roman', serif" font-size="92" fill="#F6F2E9" letter-spacing="-1">Vetwise</text>
+  <text x="303" y="200" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="26" fill="#9FD7C0">
+    Pet toxicosis &amp; medication safety, grounded in the household record
+  </text>
+
+  <!-- dose scale motif -->
+  <g transform="translate(303 246)">
+    <rect x="0" y="0" width="700" height="12" rx="6" fill="#1C4137"/>
+    <rect x="0" y="0" width="233" height="12" rx="6" fill="#F2B45C"/>
+    <rect x="233" y="0" width="180" height="12" fill="#F2705A"/>
+    <rect x="413" y="0" width="287" height="12" rx="6" fill="#B23A2E"/>
+    <circle cx="206" cy="6" r="9" fill="#F6F2E9" stroke="#0B2320" stroke-width="3"/>
+    <g font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#7FA396">
+      <text x="0" y="44">0</text>
+      <text x="215" y="44">20</text>
+      <text x="395" y="44">40</text>
+      <text x="668" y="44">60</text>
+    </g>
+    <text x="715" y="44" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#7FA396">mg/kg</text>
+  </g>
+
+  <text x="1176" y="300" text-anchor="end" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="20" fill="#5E887A">v0.1.0</text>
+</svg>

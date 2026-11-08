@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Vetwise">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#12332B"/>
+      <stop offset="1" stop-color="#0A1F1A"/>
+    </linearGradient>
+    <linearGradient id="paw" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A8F0D2"/>
+      <stop offset="1" stop-color="#6FCFAA"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+  <rect x="8" y="8" width="240" height="240" rx="49" fill="none" stroke="#245447" stroke-width="2"/>
+
+  <!-- shield -->
+  <path d="M128 34c22 12 42 17 60 18v66c0 44-25 78-60 96-35-18-60-52-60-96V52c18-1 38-6 60-18z"
+        fill="none" stroke="#3E7F6B" stroke-width="6" stroke-linejoin="round" opacity="0.75"/>
+
+  <!-- paw -->
+  <g fill="url(#paw)">
+    <ellipse cx="99" cy="98" rx="15" ry="18" transform="rotate(-20 99 98)"/>
+    <ellipse cx="157" cy="98" rx="15" ry="18" transform="rotate(20 157 98)"/>
+    <ellipse cx="78" cy="131" rx="13" ry="15" transform="rotate(-38 78 131)"/>
+    <ellipse cx="178" cy="131" rx="13" ry="15" transform="rotate(38 178 131)"/>
+    <path d="M128 116c22 0 39 15 39 34 0 15-11 24-24 24-6 0-10-2-15-2s-9 2-15 2c-13 0-24-9-24-24 0-19 17-34 39-34z"/>
+  </g>
+
+  <!-- alert cross -->
+  <g transform="translate(186 176)">
+    <circle r="26" fill="#F2705A"/>
+    <rect x="-4" y="-13" width="8" height="26" rx="3" fill="#0A1F1A"/>
+    <rect x="-13" y="-4" width="26" height="8" rx="3" fill="#0A1F1A"/>
+  </g>
+</svg>

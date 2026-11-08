@@ -21,6 +21,8 @@ export interface ScriptedPet {
   name: string;
   species: 'dog' | 'cat';
   weightKg: number;
+  /** Used to resolve "my corgi" when the caregiver does not say the pet's name. */
+  breed?: string;
 }
 
 export interface ScriptedMedication {
@@ -35,6 +37,8 @@ export interface ScriptedContext {
   people: string[];
   pets: ScriptedPet[];
   medications: ScriptedMedication[];
+  /** On-file poison control, so a dead end can still name a real number. */
+  poisonControl?: { name: string; phone: string };
 }
 
 export interface ScriptedState {
@@ -62,13 +66,13 @@ const GREETING =
   /\b(hi|hello|hey|good (morning|evening|afternoon)|what'?s due|whats due|check in|check-in|anything due|tonight|this evening|doses?|medications? due)\b/i;
 
 const EXPOSURE_VERB =
-  /\b(ate|eaten|eat|eating|got into|got in|licked|lick|drank|drink|chewed|chew|swallowed|ingested|tasted|taste|stole|grabbed|consumed|nibbled|bit|bite|found (him|her|them)? ?(with|near|in)|may have|might have|think .* (ate|got into))\b/i;
+  /\b(ate|eaten|eat|eating|got into|got in|licked|lick|drank|drink|chewed|chew|swallowed|ingested|tasted|taste|stole|grabbed|consumed|nibbled|munched|munch|snacked|snack|chowed|chow|gulped|gulp|scarfed|scarf|devoured|devour|snaffled|snaffle|bit|bite|found (him|her|them)? ?(with|near|in)|may have|might have|think .* (ate|got into)|got a ?hold of)\b/i;
 
 const CONSIDERING = /\b(can|should|could|is it (ok|okay|safe)|would it be (ok|okay|safe)|safe|okay to|alright to)\b/i;
 
 const HELP_WORDS = /\b(toxic|poison|danger|dangerous|risk|risky|bad for|safe for|harmful)\b/i;
 
-const ALERT_VERB = /\b(text|message|alert|notify|tell)\b/i;
+const ALERT_VERB = /\b(text|message|alert|notify|tell|remind)\b/i;
 
 const STOP_WORDS = /\b(stop|stopped|discontinue|pause|paused|hold|resume|restart|start again|put .* back on)\b/i;
 
@@ -163,7 +167,28 @@ function includesWord(haystack: string, needle: string): boolean {
 }
 
 function petFrom(context: ScriptedContext, text: string): ScriptedPet | undefined {
-  return context.pets.find((pet) => includesWord(text, pet.name));
+  const named = context.pets.find((pet) => includesWord(text, pet.name));
+  if (named) return named;
+
+  // "my corgi" / "the shorthair" - a breed token unique to one pet.
+  const byBreed = context.pets.filter(
+    (pet) =>
+      pet.breed !== undefined &&
+      pet.breed
+        .toLowerCase()
+        .split(/\s+/)
+        .some((token) => token.length >= 4 && includesWord(text, token)),
+  );
+  if (byBreed.length === 1) return byBreed[0];
+
+  // "my dog" / "the cat" - only when the household has exactly one of them.
+  const species = /\b(dog|puppy|pup|doggo)\b/i.test(text) ? 'dog' : /\b(cat|kitten|kitty)\b/i.test(text) ? 'cat' : undefined;
+  if (species) {
+    const matches = context.pets.filter((pet) => pet.species === species);
+    if (matches.length === 1) return matches[0];
+  }
+
+  return undefined;
 }
 
 function personFrom(context: ScriptedContext, text: string): string | undefined {
@@ -196,6 +221,17 @@ function toxinFrom(text: string): { alias: string; id: string; name: string } | 
     }
   }
   return best;
+}
+
+/** The phrase after the ingestion verb, e.g. "trash" in "Mochi got into the trash". */
+function substanceFrom(text: string, match: RegExpExecArray): string | undefined {
+  const tail = text.slice(match.index + match[0].length).split(/[.,;!?]/)[0] ?? '';
+  const cleaned = tail
+    .replace(/\b(the|a|an|some|my|his|her|their|our|of|on|at|from|into)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!cleaned) return undefined;
+  return cleaned.split(/\s+/).slice(0, 5).join(' ');
 }
 
 function productFrom(toxinId: string, text: string): string | undefined {
@@ -389,6 +425,14 @@ export async function runScriptedAgent(options: {
     return result;
   };
 
+  /** Phone numbers come from the household record, never from a constant here. */
+  const contacts = async (): Promise<{ emergency?: { name: string; phone: string } }> => {
+    const household = await call('get_household', {});
+    const clinics =
+      (household.structured as { clinics?: Array<{ name: string; phone: string; kind: string }> } | undefined)?.clinics ?? [];
+    return { emergency: clinics.find((clinic) => clinic.kind === 'emergency') };
+  };
+
   /* ---------------------------------------------------------------- *
    * 1. Confirmation of a pending record change.
    * ---------------------------------------------------------------- */
@@ -492,6 +536,65 @@ export async function runScriptedAgent(options: {
     const reply = exposureReply(assessment);
     state.lastReply = reply;
     return { reply, steps, provider: 'scripted' };
+  }
+
+  /* ---------------------------------------------------------------- *
+   * 2c. Something was eaten, but it is not in the catalogue. Ask the
+   *     engine anyway: it must answer `unverified`, never reassurance.
+   * ---------------------------------------------------------------- */
+  const ingested = /\b(ate|eaten|munched|snacked|chowed|gulped|scarfed|devoured|snaffled|swallowed|ingested|consumed|licked|drank|chewed|got into|got in|got a ?hold of|stole|grabbed|nibbled|tasted)\b/i.exec(
+    normalised,
+  );
+  if (ingested && !toxin) {
+    const pet = petFrom(context, normalised);
+    if (pet) {
+      const substance = substanceFrom(text, ingested);
+      if (substance) {
+        const result = await call('assess_toxin_exposure', {
+          pet: pet.name,
+          substance,
+          intent: 'ingested',
+          symptoms: symptomsFrom(normalised),
+        });
+        if (result.ok) {
+          const assessment = result.structured as AssessmentResult;
+          state.lastPet = pet.name;
+          state.lastReply = exposureReply(assessment);
+          return { reply: state.lastReply, steps, provider: 'scripted' };
+        }
+      }
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * 2d. A symptom with no exposure attached is still a care event:
+   *     put it on the record and name who to call.
+   * ---------------------------------------------------------------- */
+  const standaloneSymptoms = symptomsFrom(normalised);
+  if (standaloneSymptoms.length > 0) {
+    const pet = petFrom(context, normalised) ?? (context.pets.length === 1 ? context.pets[0] : undefined);
+    if (pet) {
+      const severity = standaloneSymptoms.some((entry) => ['seizure', 'collapse', 'difficulty_breathing'].includes(entry))
+        ? 'severe'
+        : 'moderate';
+      const logged = await call('log_care_event', {
+        pet: pet.name,
+        kind: 'symptom',
+        symptom: standaloneSymptoms[0],
+        severity,
+      });
+      if (logged.ok) {
+        const { emergency } = await contacts();
+        const urgent = severity === 'severe';
+        return {
+          reply: urgent
+            ? `I logged ${standaloneSymptoms.join(' and ')} for ${pet.name} as a severe sign. ${emergency ? `Call ${emergency.name} at ${emergency.phone}` : 'Call your veterinarian'} now — do not wait to see if it passes.`
+            : `I logged ${standaloneSymptoms.join(' and ')} for ${pet.name}. ${emergency ? `If it continues, gets worse, or comes with tremors, collapse or trouble breathing, call ${emergency.name} at ${emergency.phone}` : 'If it continues or gets worse, call your veterinarian'}.`,
+          steps,
+          provider: 'scripted',
+        };
+      }
+    }
   }
 
   /* ---------------------------------------------------------------- *
@@ -669,7 +772,19 @@ export async function runScriptedAgent(options: {
   }
 
   /* ---------------------------------------------------------------- *
-   * 9. Fallback — name what the server can do, and the poison number.
+   * 9. No delete tool exists. Say so instead of offering a menu.
+   * ---------------------------------------------------------------- */
+  if (/\b(delete|remove|erase|purge|wipe|drop)\b/i.test(normalised)) {
+    return {
+      reply:
+        'Vetwise has no delete tool: the server can add to the record but never remove from it. Ask Maya, the account owner, if a record needs correcting.',
+      steps,
+      provider: 'scripted',
+    };
+  }
+
+  /* ---------------------------------------------------------------- *
+   * 10. Fallback — name what the server can do, and the poison number.
    * ---------------------------------------------------------------- */
   return {
     reply:

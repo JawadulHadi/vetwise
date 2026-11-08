@@ -1,0 +1,66 @@
+name: Toxin catalogue correction
+description: A dose band, citation, or any-exposure rule in the catalogue is wrong or out of date.
+title: 'catalogue: '
+labels: [catalogue, safety]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The catalogue is the part of Vetwise that must be right. A correction is
+        only accepted with a citation a reviewer can open: the source title, the
+        section or table, and the access date.
+
+        Do not use this form for a pet emergency. Call your veterinarian or
+        poison control.
+
+  - type: input
+    id: entry
+    attributes:
+      label: Catalogue entry
+      description: The toxin id or name, e.g. `chocolate`, `lily`, `xylitol`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: What the catalogue says now
+      description: Quote the band, gate, or citation as it exists in `src/domain/toxins.ts`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed
+    attributes:
+      label: What it should say
+      description: Include the numbers and units exactly as published.
+    validations:
+      required: true
+
+  - type: textarea
+    id: source
+    attributes:
+      label: Source
+      description: Title, publisher, URL or ISBN, section/table, and the date you accessed it.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: species
+    attributes:
+      label: Species affected
+      options:
+        - dog
+        - cat
+        - both
+        - other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have not included any real household or patient data.
+          required: true

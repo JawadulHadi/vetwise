@@ -25,13 +25,14 @@ export class ScopeError extends Error {
 export interface Caller {
   clientId: string;
   scopes: string[];
-  token: string;
 }
 
 export function callerFrom(ctx: CallerContext): Caller | undefined {
   const auth = ctx.http?.authInfo;
   if (!auth) return undefined;
-  return { clientId: auth.clientId, scopes: auth.scopes ?? [], token: auth.token };
+  // `authInfo.token` is deliberately not carried into the tool layer: tool code
+  // has no reason to see the credential, so a future log line cannot leak it.
+  return { clientId: auth.clientId, scopes: auth.scopes ?? [] };
 }
 
 export function requireScope(ctx: CallerContext, scope: string): Caller {
@@ -68,7 +69,7 @@ export function publishableState(store: Store) {
       audit: db.audit.slice(0, 25),
       serverTime: now().toISOString(),
       demoTomorrow: false,
-      tokens: config.tokens.map(({ token, ...rest }) => ({ ...rest, token: `${token.slice(0, 4)}…` })),
+      tokens: config.tokens.map(({ tokenHash: _hash, ...rest }) => rest),
     };
   });
 }

@@ -1,0 +1,42 @@
+name: Feature request
+description: A tool, verdict, or workflow Vetwise should have.
+title: 'feat: '
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What a caregiver, sitter, or host cannot do today.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like
+      description: If it is a new tool, name it, say which scope it needs, and what it returns.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - MCP tool
+        - MCP resource or prompt
+        - Safety engine / catalogue
+        - Simulator UI
+        - Agent planner
+        - Operations / deployment
+    validations:
+      required: true
+
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety implications
+      description: Could this turn a missing fact into reassurance, give treatment advice, or widen a token's reach?
+    validations:
+      required: true

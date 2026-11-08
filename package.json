@@ -14,7 +14,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --import tsx --test tests/toxins.test.ts",
     "smoke": "tsx tests/mcp-smoke.ts",
-    "check": "npm run typecheck && npm test && npm run smoke"
+    "regress": "tsx tests/review-regressions.ts",
+    "check": "npm run typecheck && npm test && npm run smoke && npm run regress"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.900.0",

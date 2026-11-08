@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Pet emergency
+    url: https://www.aspca.org/pet-care/animal-poison-control
+    about: This tracker is not for emergencies. Call your veterinarian or ASPCA APCC at (888) 426-4435.
+  - name: Question about the safety model
+    url: https://github.com/JawadulHadi/vetwise/blob/main/docs/SAFETY.md
+    about: Read the safety policy before opening an issue about a verdict.

@@ -2,13 +2,19 @@
 
 A 2–3 minute walkthrough that shows the whole product: a household record, grounded toxicosis math, `unverified` refusal, symptom escalation, a two-phase record change, and a sitter who cannot change a prescription.
 
+<p align="center">
+  <img src="demo.gif" alt="The scripted exposure flow recorded end to end" width="100%">
+</p>
+
+The clip above is the first half of this script (chocolate → symptom escalation → owner alert). `docs/demo.gif` is regenerated from the running simulator, not mocked.
+
 ---
 
 ## Before you start
 
 ```bash
 npm install
-npm run check          # optional but reassuring: 17 unit tests + transport smoke
+npm run check          # optional but reassuring: typecheck + 17 unit tests + transport smoke + review regressions
 npm start
 ```
 

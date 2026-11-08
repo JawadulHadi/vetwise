@@ -1,3 +1,15 @@
+<p align="center">
+  <img src="assets/banner.svg" alt="Vetwise — pet toxicosis and medication safety, grounded in the household record" width="100%">
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img alt="Licence: MIT" src="https://img.shields.io/badge/licence-MIT-8FE3BD"></a>
+  <img alt="Node 22 or 24" src="https://img.shields.io/badge/node-22%20%7C%2024-8FE3BD">
+  <img alt="Tests: 17 unit + transport smoke" src="https://img.shields.io/badge/tests-17%20unit%20%2B%20smoke-8FE3BD">
+  <a href="https://modelcontextprotocol.io"><img alt="MCP: Streamable HTTP" src="https://img.shields.io/badge/MCP-streamable%20HTTP-F2B45C"></a>
+  <img alt="Release: v0.1.0" src="https://img.shields.io/badge/release-v0.1.0-F2705A">
+</p>
+
 # Vetwise
 
 A self-hosted MCP server that owns a household's pet records and answers **"is this safe for my pet?"** with species- and weight-aware toxicosis math and cited veterinary sources.
@@ -23,6 +35,10 @@ Open <http://127.0.0.1:3000>. The demo clock is frozen at **21:40**; the househo
 Suggested first line: **“What's due tonight?”**
 
 The full scripted walkthrough is in [docs/DEMO.md](docs/DEMO.md).
+
+<p align="center">
+  <img src="docs/demo.gif" alt="Vetwise demo: a chocolate exposure gets dose math and a call_vet verdict, a reported symptom escalates it to emergency, and the owner is alerted — with every MCP call listed in the traffic panel" width="100%">
+</p>
 
 ### Demo household
 
@@ -117,10 +133,12 @@ Copy `.env.example` to `.env`. The values that matter:
 | `PORT` / `HOST`         | `3000` / `127.0.0.1`           | HTTP listener                                                    |
 | `PUBLIC_BASE_URL`       | `http://127.0.0.1:3000`        | URL the simulator uses to reach its own `/mcp`                   |
 | `VETWISE_DATA`          | `./data/db.json`               | JSON store; delete to reseed the demo                            |
-| `DEMO_CLOCK`            | unset (real time)              | `21:40` freezes the demo narrative; ISO timestamps also accepted |
-| `OWNER_TOKEN`           | `maya-owner-demo-token`        | Owner bearer token                                               |
-| `SITTER_TOKEN`          | `noah-sitter-demo-token`       | Sitter bearer token                                              |
+| `DEMO_CLOCK`            | unset (real time)              | `21:40` freezes the demo narrative; refused when `NODE_ENV=production` |
+| `OWNER_TOKEN`           | demo token when `VETWISE_DEMO` | Owner bearer token — required outside demo mode                  |
+| `SITTER_TOKEN`          | demo token when `VETWISE_DEMO` | Sitter bearer token — required outside demo mode                 |
+| `VETWISE_DEMO`          | `1` unless `NODE_ENV=production` | Allow the published demo tokens; set `0` to require real ones    |
 | `VETWISE_AGENT`         | `scripted` when no credentials | `scripted` or `bedrock`                                          |
+| `BEDROCK_MODEL_ID`      | `amazon.nova-lite-v1:0`        | Required when `VETWISE_AGENT=bedrock`                            |
 | `ALLOWED_HOSTS`         | empty                          | Required behind a tunnel; prevents DNS rebinding                 |
 | `CAREGIVER_WEBHOOK_URL` | empty                          | If set, alerts are POSTed and delivery is recorded               |
 
@@ -138,11 +156,25 @@ node --env-file=.env --import tsx src/index.ts
 npm run typecheck   # tsc --noEmit
 npm test            # safety-engine unit tests (17)
 npm run smoke       # boots the real server and drives it with a real MCP client
-npm run check       # all three
+npm run regress     # replays every finding in Vetwise-Code-Review.md
+npm run check       # all four
 npm run dev         # tsx watch
 ```
 
-The smoke test starts its own server on port `8799` with a temporary data file, exercises all 9 tools, both identities, resources, prompts, single-use confirmations and the 401 gate, then removes its data.
+The smoke test starts its own server on port `8799` with a temporary data file, exercises all 9 tools, both identities, resources, prompts, single-use confirmations and the 401 gate, then removes its data. `npm run regress` boots a second server on `8811` and asserts the review fixes over real HTTP and MCP: hashed tokens, caller-bound sessions, `/healthz` minimalism, security headers, rate limiting, sanitised alert bodies, medication routes, id length, and the startup refusals.
+
+---
+
+## Security posture
+
+- Bearer tokens are stored as SHA-256 digests and compared with `timingSafeEqual`; the raw secret never leaves the request that carried it, and `/api/whoami` only ever returns a four-character hint.
+- Published demo tokens work only in demo mode. `NODE_ENV=production` (or `VETWISE_DEMO=0`) refuses to start without `OWNER_TOKEN` and `SITTER_TOKEN`, and rejects the demo strings outright.
+- Chat sessions are keyed by `clientId:sessionId`, expire after 30 minutes, and are capped at 200.
+- `/api/chat` is rate limited per token (20/min), request bodies over 2,000 characters are refused, and the client sees one generic error while the operator sees the full cause.
+- The static app is served with a strict CSP (`default-src 'self'`), `nosniff`, `X-Frame-Options: DENY` and no third-party origins.
+- `/healthz` returns `{ ok, time }` only; version, agent mode and model are not public.
+- Alert bodies are stripped of control characters and angle brackets before they reach the outbox or a webhook.
+- `npm run regress` proves each of those still holds.
 
 ---
 

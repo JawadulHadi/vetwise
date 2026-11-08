@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { Client } from '@modelcontextprotocol/client';
 import { config } from '../config.js';
-import { runBedrockAgent } from './bedrock.js';
+import { runBedrockAgent, type ChatTurn } from './bedrock.js';
 import type { AgentResult } from './mcp.js';
 import { runScriptedAgent, type ScriptedContext, type ScriptedState } from './scripted.js';
 
@@ -20,7 +20,7 @@ export function hasAwsCredentials(): boolean {
 export async function runAgent(options: {
   client: Client;
   message: string;
-  transcript: string;
+  history: ChatTurn[];
   context: ScriptedContext;
   scriptedState: ScriptedState;
 }): Promise<AgentResult> {
@@ -32,10 +32,13 @@ export async function runAgent(options: {
       return await runBedrockAgent({
         client: options.client,
         message: options.message,
-        transcript: options.transcript,
+        history: options.history,
         context: options.context,
       });
     } catch (error) {
+      // Log the cause for the operator; tell the caregiver only that the model
+      // path failed, never with SDK or filesystem detail.
+      console.error('[vetwise] Bedrock agent failed, falling back to the scripted planner:', error);
       const fallback = await runScriptedAgent({
         client: options.client,
         message: options.message,
@@ -44,7 +47,7 @@ export async function runAgent(options: {
       });
       return {
         ...fallback,
-        reply: `${fallback.reply}\n\n(Bedrock was unreachable — ${(error as Error).message}. Answered with the scripted demo agent.)`,
+        reply: `${fallback.reply}\n\n(The Bedrock agent was unavailable, so this answer came from the deterministic planner.)`,
       };
     }
   }

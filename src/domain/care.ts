@@ -1,4 +1,5 @@
 import { atLocalTime, minutesUntil, now, todayKey } from '../clock.js';
+import { newId } from '../store/store.js';
 import type {
   CareLog,
   CareSlot,
@@ -258,7 +259,7 @@ export function logCareEvent(db: Database, input: LogCareInput): LogCareResult {
       event = existing;
     } else {
       event = {
-        id: `care_${Math.random().toString(36).slice(2, 10)}`,
+        id: newId('care'),
         petId: pet.id,
         kind: 'medication',
         medicationId: medication.id,
@@ -284,7 +285,7 @@ export function logCareEvent(db: Database, input: LogCareInput): LogCareResult {
     pet.weightKg = input.valueKg;
     pet.weightUpdatedAt = recordedAt;
     const event: CareLog = {
-      id: `care_${Math.random().toString(36).slice(2, 10)}`,
+      id: newId('care'),
       petId: pet.id,
       kind: 'weight',
       day,
@@ -300,7 +301,7 @@ export function logCareEvent(db: Database, input: LogCareInput): LogCareResult {
   if (input.kind === 'symptom' && !input.symptom) throw new CareError('A symptom is required for a symptom log.');
 
   const event: CareLog = {
-    id: `care_${Math.random().toString(36).slice(2, 10)}`,
+    id: newId('care'),
     petId: pet.id,
     kind: input.kind,
     day,

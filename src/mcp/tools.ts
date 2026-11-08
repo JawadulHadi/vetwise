@@ -1,7 +1,7 @@
 import type { McpServer, ServerContext } from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
 import { atLocalTime, formatTime, isDayKey, now, todayKey } from '../clock.js';
-import { sendCaregiverAlert } from '../domain/alerts.js';
+import { sanitiseAlertBody, sendCaregiverAlert } from '../domain/alerts.js';
 import {
   careSummary,
   CareError,
@@ -147,6 +147,9 @@ const scheduleSlotSchema = z.object({
   label: z.string().optional(),
 });
 
+const MEDICATION_ROUTES = ['oral', 'topical', 'transdermal', 'inhalation', 'injection'] as const;
+const medicationRoute = z.enum(MEDICATION_ROUTES);
+
 const medicationViewSchema = z.object({
   id: z.string(),
   petId: z.string(),
@@ -155,7 +158,7 @@ const medicationViewSchema = z.object({
   strength: z.string().optional(),
   form: z.string().optional(),
   doseLabel: z.string(),
-  route: z.enum(['oral', 'topical', 'transdermal', 'inhalation', 'injection']),
+  route: medicationRoute,
   schedule: z.array(scheduleSlotSchema),
   scheduleLabel: z.string(),
   status: z.enum(['active', 'paused', 'stopped', 'prn']),
@@ -460,8 +463,9 @@ function unknownSubstanceAssessment(options: {
   intent: 'ingested' | 'considering';
   symptoms: Symptom[];
   contacts: ExposureContacts;
+  latencyMs: number;
 }): ExposureAssessment {
-  const { pet, substance, amount, intent, symptoms, contacts } = options;
+  const { pet, substance, amount, intent, symptoms, contacts, latencyMs } = options;
   const findings: ExposureFinding[] = [];
 
   let verdict: Verdict = 'unverified';
@@ -562,7 +566,7 @@ function unknownSubstanceAssessment(options: {
       'Vetwise does not advise inducing vomiting or give any home treatment.',
     ],
     checkedAt: now().toISOString(),
-    latencyMs: 1,
+    latencyMs,
   };
 }
 
@@ -778,6 +782,7 @@ export function registerTools(server: McpServer, store: Store): void {
         const intent = args.intent ?? 'ingested';
         const symptoms = (args.symptoms ?? []) as Symptom[];
         const observedAt = resolveObservedAt(args.observedAt);
+        const startedAt = performance.now();
 
         const { pet, toxin, assessment } = store.read((db) => {
           const pet = requirePet(db, args.pet);
@@ -805,6 +810,7 @@ export function registerTools(server: McpServer, store: Store): void {
                 intent,
                 symptoms,
                 contacts,
+                latencyMs: Math.max(1, Math.round(performance.now() - startedAt)),
               });
 
           return { pet, toxin, assessment };
@@ -982,6 +988,9 @@ export function registerTools(server: McpServer, store: Store): void {
         name: z.string().optional().describe('Medication name; required for action=medication.add'),
         strength: z.string().optional(),
         doseLabel: z.string().optional().describe('Plain-language dose, for example "1/2 tablet"'),
+        route: medicationRoute
+          .optional()
+          .describe('Administration route; required for action=medication.add (defaults to oral)'),
         scheduleTimes: z.array(z.string()).optional().describe('HH:MM times for a new medication'),
         weightKg: z.number().positive().optional().describe('New weight; required for action=pet.weight'),
         note: z.string().optional(),
@@ -1027,10 +1036,11 @@ export function registerTools(server: McpServer, store: Store): void {
                 name: args.name,
                 ...(args.strength ? { strength: args.strength } : {}),
                 doseLabel: args.doseLabel,
+                route: args.route ?? 'oral',
                 schedule,
                 ...(args.note ? { notes: args.note } : {}),
               },
-              summary: `Add ${args.name}${args.strength ? ` ${args.strength}` : ''} for ${pet.name}: ${args.doseLabel}, ${times.join(' and ')}.`,
+              summary: `Add ${args.name}${args.strength ? ` ${args.strength}` : ''} for ${pet.name}: ${args.doseLabel} ${args.route ?? 'oral'}, ${times.join(' and ')}.`,
             };
           }
 
@@ -1066,7 +1076,7 @@ export function registerTools(server: McpServer, store: Store): void {
           proposal.summary,
           '',
           `Read that back to ${callerLabel(caller.clientId)} and ask for an explicit yes.`,
-          `If they say yes, call apply_record_change with token ${token}.`,
+          'If they say yes, call apply_record_change with the token from structuredContent — do not read the token aloud.',
           `The code expires at ${new Date(expiresAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}.`,
         ].join('\n');
 
@@ -1101,6 +1111,7 @@ export function registerTools(server: McpServer, store: Store): void {
     name: z.string(),
     strength: z.string().optional(),
     doseLabel: z.string(),
+    route: medicationRoute,
     schedule: z.array(z.object({ id: z.string(), time: z.string(), label: z.string().optional() })),
     notes: z.string().optional(),
   });
@@ -1176,7 +1187,7 @@ export function registerTools(server: McpServer, store: Store): void {
                 name: data.name,
                 ...(data.strength ? { strength: data.strength } : {}),
                 doseLabel: data.doseLabel,
-                route: 'oral',
+                route: data.route,
                 schedule: data.schedule,
                 status: 'active',
                 startedOn: todayKey(),
@@ -1258,6 +1269,10 @@ export function registerTools(server: McpServer, store: Store): void {
     async ({ to, channel = 'sms', body }, ctx: ServerContext) => {
       try {
         const caller = requireScope(ctx, SCOPES.notify);
+        const clean = sanitiseAlertBody(body);
+        if (clean.length < 3) {
+          throw new CareError('The alert body needs at least a few words of plain text — line breaks and markup are stripped.');
+        }
         const person = store.read((db) => findPerson(db, to) ?? db.people.find((entry) => entry.phone === to));
         if (!person) {
           const allowed = store.read((db) => db.people.map((entry) => `${entry.name} (${entry.role})`).join(', '));
@@ -1266,7 +1281,7 @@ export function registerTools(server: McpServer, store: Store): void {
 
         const item = await sendCaregiverAlert(store, {
           to: person.phone ?? person.name,
-          body,
+          body: clean,
           channel,
           actor: caller.clientId,
         });
@@ -1275,7 +1290,7 @@ export function registerTools(server: McpServer, store: Store): void {
           content: [
             {
               type: 'text',
-              text: `Queued ${channel} to ${person.name}${person.phone ? ` (${person.phone})` : ''}: “${body}”. Delivery status: ${item.status}.`,
+              text: `Queued ${channel} to ${person.name}${person.phone ? ` (${person.phone})` : ''}: “${item.body}”. Delivery status: ${item.status}.`,
             },
           ],
           structuredContent: item,

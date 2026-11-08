@@ -1,7 +1,11 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Database } from '../domain/types.js';
+import { hashToken } from '../hash.js';
+
+// Re-exported so existing importers keep one obvious entry point.
+export { hashToken };
 
 export function emptyDatabase(): Database {
   return {
@@ -18,12 +22,18 @@ export function emptyDatabase(): Database {
   };
 }
 
-export function hashToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
+export function newId(prefix: string): string {
+  return `${prefix}_${randomUUID().replace(/-/g, '').slice(0, 16)}`;
 }
 
-export function newId(prefix: string): string {
-  return `${prefix}_${randomUUID().slice(0, 8)}`;
+/** Bounds on append-only collections, so a long-running household log cannot
+ *  grow the JSON file (and every write) without limit. */
+const MAX_AUDIT_ENTRIES = 1_000;
+const MAX_OUTBOX_ITEMS = 100;
+
+function capCollections(db: Database): void {
+  if (db.audit.length > MAX_AUDIT_ENTRIES) db.audit.length = MAX_AUDIT_ENTRIES;
+  if (db.outbox.length > MAX_OUTBOX_ITEMS) db.outbox.length = MAX_OUTBOX_ITEMS;
 }
 
 function looksLikeDatabase(value: unknown): value is Database {
@@ -110,6 +120,7 @@ export class Store {
   mutate<T>(mutator: (db: Database) => T | Promise<T>): Promise<T> {
     const run = this.queue.then(async () => {
       const result = await mutator(this.state);
+      capCollections(this.state);
       await this.persist();
       this.version += 1;
       return result;

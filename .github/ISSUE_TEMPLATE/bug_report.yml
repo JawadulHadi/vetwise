@@ -1,0 +1,69 @@
+name: Bug report
+description: Something in Vetwise is wrong, crashes, or gives an unsafe answer.
+title: 'bug: '
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not include tokens, phone numbers, or real household data.** This
+        repository ships a fictional demo household; replace any personal detail
+        with the equivalent demo value.
+
+        If the report is about a safety verdict, say which verdict you expected
+        and what Vetwise returned. Do not use this form for a pet emergency.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: The message, tool call, or screen and what it returned.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: For a verdict, the expected value (`emergency`, `call_vet`, `monitor`, `no_known_toxicity`, `unverified`) and why.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. npm start with DEMO_CLOCK=21:40
+        2. Send "Mochi got into 40 g of 65% dark chocolate"
+        3. See verdict ...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Commit or version
+      description: Output of `git rev-parse --short HEAD`, or the release tag.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Agent mode
+      options:
+        - scripted
+        - bedrock
+        - not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Strip anything sensitive. Server console or the browser console is fine.
+      render: shell
+    validations:
+      required: false

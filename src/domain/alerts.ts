@@ -11,17 +11,31 @@ export interface AlertRequest {
 }
 
 /**
+ * The body is written to an outbox and can be POSTed to a webhook that may feed
+ * an SMS or email gateway. Strip control characters and angle brackets so a
+ * model-composed message cannot carry line breaks or markup into that pipeline.
+ */
+export function sanitiseAlertBody(body: string): string {
+  return body
+    .replace(/[\u0000-\u001F\u007F]/g, ' ')
+    .replace(/[<>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Caregiver alerts go through an outbox first and are delivered by webhook when
  * one is configured. The outbox is the demo's visible audit trail and the
  * replayable record a real deployment would use after a failed send.
  */
 export async function sendCaregiverAlert(store: Store, request: AlertRequest): Promise<OutboxItem> {
+  const body = sanitiseAlertBody(request.body);
   const item: OutboxItem = {
     id: newId('alert'),
     createdAt: now().toISOString(),
     channel: request.channel,
     to: request.to,
-    body: request.body,
+    body,
     status: 'queued',
     createdBy: request.actor,
   };

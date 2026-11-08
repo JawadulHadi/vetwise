@@ -151,10 +151,21 @@ The sitter has `read`, `log` and `notify`, so Noah can assess an exposure and te
 | `OWNER_TOKEN`  | `maya` | `vetwise.read`, `vetwise.log`, `vetwise.write`, `vetwise.notify` |
 | `SITTER_TOKEN` | `noah` | `vetwise.read`, `vetwise.log`, `vetwise.notify`                  |
 
+- Tokens are stored as SHA-256 digests and compared with `timingSafeEqual`, so the process never holds a comparable plaintext credential outside the request that presented it.
+- `bearerAuth` puts only `clientId`, the granted scopes and a four-character hint on `req.auth`. `Caller` has no token field at all, so no later log line or tool result can leak one.
+- The chat handler is the single place that still needs the plaintext: it reads it from the same header to make its internal `POST /mcp` call, and never stores it.
 - Missing or unknown bearer → `401` with `WWW-Authenticate`.
 - The MCP endpoint rejects unknown `Host` headers when `ALLOWED_HOSTS` is set (DNS-rebinding protection).
-- `PUBLIC_BASE_URL` must be the URL the process can reach itself on; the simulator's MCP client uses it.
-- Tokens are demo credentials on purpose. Replace them before exposing the server beyond localhost.
+- `PUBLIC_BASE_URL` must be the URL the process can reach itself on; it is probed once after the listener opens, and a misconfiguration is reported at boot rather than per request.
+- Outside demo mode (`VETWISE_DEMO=0` or `NODE_ENV=production`) the process refuses to start without explicit `OWNER_TOKEN` and `SITTER_TOKEN`, and refuses the published demo strings.
+
+### Sessions and limits
+
+Chat sessions live in a `Map` keyed by `clientId:sessionId` — a caller cannot reach another person's transcript by guessing an id. Entries expire after 30 minutes and the map is capped at 200. `/api/chat` allows 20 requests per minute per token (each turn can cost several model calls) and refuses messages over 2,000 characters.
+
+### Single process only
+
+The JSON store serialises writes inside one process with a promise queue and `write-then-rename`. That is atomic against a crash, but **two processes sharing `data/db.json` will race** (pm2 cluster, overlapping deploys, two containers on one volume). Run one instance per data file; a multi-process deployment needs a database with OS-level locking (SQLite or Postgres). Startup warns when `WEB_CONCURRENCY > 1`.
 
 ---
 
