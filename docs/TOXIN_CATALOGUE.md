@@ -10,32 +10,32 @@
 
 ## Summary
 
-| ID | Toxin | Category | Species | Basis | Any exposure |
-|---|---|---|---|---|---|
-| `chocolate` | Chocolate | food | dog, cat | mg/kg methylxanthines | — |
-| `xylitol` | Xylitol | food | dog only | mg/kg xylitol | — |
-| `grapes` | Grapes and raisins | food | dog only | pieces/kg | `call_vet` |
-| `allium` | Onion and garlic | food | dog, cat | g/kg | — |
-| `macadamia` | Macadamia nuts | food | dog only | g/kg | — |
-| `avocado` | Avocado | food | dog, cat | g/kg | `monitor` |
-| `bread-dough` | Bread dough | food | dog, cat | g/kg | — |
-| `alcohol` | Alcohol (ethanol) | food | dog, cat | g/kg | — |
-| `caffeine` | Caffeine | food | dog, cat | mg/kg | — |
-| `salt` | Salt (sodium chloride) | food | dog, cat | g/kg | — |
-| `lily` | True lily (Lilium spp.) | plant | cat only | — | `emergency` |
-| `sago-palm` | Sago palm (Cycas revoluta) | plant | dog, cat | — | `emergency` |
-| `azalea` | Azalea and rhododendron | plant | dog, cat | g/kg | `call_vet` |
-| `tulip` | Tulip and daffodil bulbs | plant | dog, cat | g/kg | `call_vet` |
-| `pothos` | Pothos and philodendron | plant | dog, cat | g/kg | `monitor` |
-| `ibuprofen` | Ibuprofen | human medicine | dog, cat | mg/kg | — |
-| `acetaminophen` | Acetaminophen | human medicine | dog, cat | mg/kg | — |
-| `aspirin` | Aspirin | human medicine | dog, cat | mg/kg | — |
-| `ssri` | Antidepressants (SSRIs/SNRIs) | human medicine | dog, cat | mg/kg | — |
-| `permethrin` | Permethrin flea products | pesticide | dog, cat | mg/kg | `call_vet` (cat: `emergency` band) |
-| `rodenticide` | Rodenticide | pesticide | dog, cat | — | `emergency` |
-| `ethylene-glycol` | Ethylene glycol (antifreeze) | household | dog, cat | ml/kg | `emergency` |
-| `mothballs` | Mothballs | household | dog, cat | g/kg | `call_vet` |
-| `essential-oils` | Essential oils | household | dog, cat | ml/kg | `call_vet` |
+| ID                | Toxin                         | Category       | Species  | Basis                 | Any exposure                       |
+| ----------------- | ----------------------------- | -------------- | -------- | --------------------- | ---------------------------------- |
+| `chocolate`       | Chocolate                     | food           | dog, cat | mg/kg methylxanthines | —                                  |
+| `xylitol`         | Xylitol                       | food           | dog only | mg/kg xylitol         | —                                  |
+| `grapes`          | Grapes and raisins            | food           | dog only | pieces/kg             | `call_vet`                         |
+| `allium`          | Onion and garlic              | food           | dog, cat | g/kg                  | —                                  |
+| `macadamia`       | Macadamia nuts                | food           | dog only | g/kg                  | —                                  |
+| `avocado`         | Avocado                       | food           | dog, cat | g/kg                  | `monitor`                          |
+| `bread-dough`     | Bread dough                   | food           | dog, cat | g/kg                  | —                                  |
+| `alcohol`         | Alcohol (ethanol)             | food           | dog, cat | g/kg                  | —                                  |
+| `caffeine`        | Caffeine                      | food           | dog, cat | mg/kg                 | —                                  |
+| `salt`            | Salt (sodium chloride)        | food           | dog, cat | g/kg                  | —                                  |
+| `lily`            | True lily (Lilium spp.)       | plant          | cat only | —                     | `emergency`                        |
+| `sago-palm`       | Sago palm (Cycas revoluta)    | plant          | dog, cat | —                     | `emergency`                        |
+| `azalea`          | Azalea and rhododendron       | plant          | dog, cat | g/kg                  | `call_vet`                         |
+| `tulip`           | Tulip and daffodil bulbs      | plant          | dog, cat | g/kg                  | `call_vet`                         |
+| `pothos`          | Pothos and philodendron       | plant          | dog, cat | g/kg                  | `monitor`                          |
+| `ibuprofen`       | Ibuprofen                     | human medicine | dog, cat | mg/kg                 | —                                  |
+| `acetaminophen`   | Acetaminophen                 | human medicine | dog, cat | mg/kg                 | —                                  |
+| `aspirin`         | Aspirin                       | human medicine | dog, cat | mg/kg                 | —                                  |
+| `ssri`            | Antidepressants (SSRIs/SNRIs) | human medicine | dog, cat | mg/kg                 | —                                  |
+| `permethrin`      | Permethrin flea products      | pesticide      | dog, cat | mg/kg                 | `call_vet` (cat: `emergency` band) |
+| `rodenticide`     | Rodenticide                   | pesticide      | dog, cat | —                     | `emergency`                        |
+| `ethylene-glycol` | Ethylene glycol (antifreeze)  | household      | dog, cat | ml/kg                 | `emergency`                        |
+| `mothballs`       | Mothballs                     | household      | dog, cat | g/kg                  | `call_vet`                         |
+| `essential-oils`  | Essential oils                | household      | dog, cat | ml/kg                 | `call_vet`                         |
 
 `no_known_toxicity` is not used by any entry. Missing amount for a toxin without an any-exposure rule returns `unverified`, not "below threshold".
 
@@ -47,23 +47,23 @@
 
 Bands are methylxanthines per kilogram of body weight:
 
-| Dose | Verdict | Meaning |
-|---|---|---|
-| < 20 mg/kg | `monitor` | Below the threshold for methylxanthine signs; fat and sugar can still cause GI upset |
-| 20–39 mg/kg | `call_vet` | Mild signs expected |
-| 40–59 mg/kg | `emergency` | Cardiotoxic range |
-| ≥ 60 mg/kg | `emergency` | Seizure range |
+| Dose        | Verdict     | Meaning                                                                              |
+| ----------- | ----------- | ------------------------------------------------------------------------------------ |
+| < 20 mg/kg  | `monitor`   | Below the threshold for methylxanthine signs; fat and sugar can still cause GI upset |
+| 20–39 mg/kg | `call_vet`  | Mild signs expected                                                                  |
+| 40–59 mg/kg | `emergency` | Cardiotoxic range                                                                    |
+| ≥ 60 mg/kg  | `emergency` | Seizure range                                                                        |
 
 Products and methylxanthine content:
 
-| Product | mg/g | Typical piece |
-|---|---|---|
-| Cocoa powder | 28.5 | 5 g |
-| Unsweetened baker's chocolate | 15.5 | 28 g |
-| 65% cocoa dark chocolate bar | 10.1 | 100 g |
-| Semisweet / sweet dark | 5.45 | 10 g |
-| Milk chocolate | 2.3 | 43 g |
-| White chocolate | 0.04 | 43 g |
+| Product                       | mg/g | Typical piece |
+| ----------------------------- | ---- | ------------- |
+| Cocoa powder                  | 28.5 | 5 g           |
+| Unsweetened baker's chocolate | 15.5 | 28 g          |
+| 65% cocoa dark chocolate bar  | 10.1 | 100 g         |
+| Semisweet / sweet dark        | 5.45 | 10 g          |
+| Milk chocolate                | 2.3  | 43 g          |
+| White chocolate               | 0.04 | 43 g          |
 
 A product is required for a mass exposure. 40 g of chocolate with no product detail is `unverified`: white chocolate at that mass is `monitor`, a 65% bar is `call_vet`. Product text matching falls back to the toxin's default product (milk chocolate) only when the text is present but unrecognised.
 
@@ -73,11 +73,11 @@ Source: Merck Veterinary Manual, *Chocolate Toxicosis in Animals* — <https://w
 
 Dogs only; cats return `unverified` because the canine thresholds do not establish feline safety.
 
-| Dose | Verdict |
-|---|---|
-| < 100 mg/kg | `monitor` |
-| 100–499 mg/kg | `call_vet` (hypoglycemia threshold) |
-| ≥ 500 mg/kg | `emergency` (hepatic injury threshold) |
+| Dose          | Verdict                                |
+| ------------- | -------------------------------------- |
+| < 100 mg/kg   | `monitor`                              |
+| 100–499 mg/kg | `call_vet` (hypoglycemia threshold)    |
+| ≥ 500 mg/kg   | `emergency` (hepatic injury threshold) |
 
 Products: sugar-free gum (500 mg/piece), mints (250 mg/piece), toothpaste (250 mg/g), xylitol-sweetened peanut butter (100 mg/g), baked goods (100 mg/g).
 
@@ -93,10 +93,10 @@ Sources: Merck Veterinary Manual, *Grape, Raisin, and Tamarind Toxicosis in Dogs
 
 ### Onion and garlic — `allium`
 
-| Dose | Verdict |
-|---|---|
-| < 5 g/kg | `monitor` |
-| 5–14 g/kg | `call_vet` |
+| Dose      | Verdict     |
+| --------- | ----------- |
+| < 5 g/kg  | `monitor`   |
+| 5–14 g/kg | `call_vet`  |
 | ≥ 15 g/kg | `emergency` |
 
 Concentrated powders are far more potent than fresh onion: 2 g per piece for powder versus 150 g for an onion and 3 g for a garlic clove. Sources: Merck Veterinary Manual, *Garlic and Onion (Allium spp.) Toxicosis*; Pet Poison Helpline, *Onion*.
@@ -155,12 +155,12 @@ Any exposure is an `emergency` for dogs and cats (cycasin → liver failure). Am
 
 These are never a dosing question. A "can I give this?" question returns `call_vet` with a "Do not give…" headline before any dose math.
 
-| Toxin | Bands | Sources |
-|---|---|---|
-| `ibuprofen` | `monitor` < 50 mg/kg · `call_vet` 50–99 · `emergency` ≥ 100 | Pet Poison Helpline, *Ibuprofen*; ASPCA APCC |
-| `acetaminophen` | `monitor` < 75 mg/kg · `call_vet` 75–149 · `emergency` ≥ 150 | Pet Poison Helpline, *Acetaminophen*; ASPCA APCC |
-| `aspirin` | `monitor` < 25 mg/kg · `call_vet` 25–49 · `emergency` ≥ 50 | Pet Poison Helpline, *Aspirin*; ASPCA APCC |
-| `ssri` | `monitor` < 5 mg/kg · `call_vet` 5–19 · `emergency` ≥ 20 | Pet Poison Helpline, *Antidepressants*; ASPCA APCC |
+| Toxin           | Bands                                                        | Sources                                            |
+| --------------- | ------------------------------------------------------------ | -------------------------------------------------- |
+| `ibuprofen`     | `monitor` < 50 mg/kg · `call_vet` 50–99 · `emergency` ≥ 100  | Pet Poison Helpline, *Ibuprofen*; ASPCA APCC       |
+| `acetaminophen` | `monitor` < 75 mg/kg · `call_vet` 75–149 · `emergency` ≥ 150 | Pet Poison Helpline, *Acetaminophen*; ASPCA APCC   |
+| `aspirin`       | `monitor` < 25 mg/kg · `call_vet` 25–49 · `emergency` ≥ 50   | Pet Poison Helpline, *Aspirin*; ASPCA APCC         |
+| `ssri`          | `monitor` < 5 mg/kg · `call_vet` 5–19 · `emergency` ≥ 20     | Pet Poison Helpline, *Antidepressants*; ASPCA APCC |
 
 Cats are called out in the summaries (acetaminophen and aspirin are especially dangerous), but the published bands are shared because the sources do not give separate feline numbers for every drug.
 
@@ -172,10 +172,10 @@ Cats are called out in the summaries (acetaminophen and aspirin are especially d
 
 Species-specific bands:
 
-| Species | Bands |
-|---|---|
-| Cat | Any exposure: `emergency`. Dog spot-on products can be fatal to cats, including from grooming a treated dog or lying on a treated blanket. |
-| Dog | `call_vet` on any exposure; `emergency` at 100 mg/kg or more. |
+| Species | Bands                                                                                                                                      |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Cat     | Any exposure: `emergency`. Dog spot-on products can be fatal to cats, including from grooming a treated dog or lying on a treated blanket. |
+| Dog     | `call_vet` on any exposure; `emergency` at 100 mg/kg or more.                                                                              |
 
 Products: dog spot-on (450 mg/ml, 4 g/piece), flea spray (2 mg/ml, 100 g/piece), flea collar (500 mg/piece). Product concentration varies widely; without a product the engine does not estimate a dose.
 

@@ -1,8 +1,8 @@
 # Architecture
 
-Vetwise is one Node process with three faces: an MCP server, a small HTTP API for the simulator, and a static page that is only a view. The important boundary is that **the household record and the safety engine live on the server**, and every answer the UI shows came through `/mcp`.
+**Vetwise** is one Node process with three faces: an MCP server, a small HTTP API for the simulator, and a static page that is only a view. The important boundary is that **the household record and the safety engine live on the server**, and every answer the UI shows came through `/mcp`.
 
-```
+```text
 src/
 ├─ index.ts                 Express wiring, auth, static UI, startup banner
 ├─ config.ts                env parsing, demo clock, bearer tokens, Bedrock config
@@ -44,7 +44,7 @@ tests/
 
 ### A. Host tool call
 
-```
+```text
 POST /mcp  (Authorization: Bearer <token>)
   → bearerAuth              token → req.auth { clientId, scopes }
   → recordTraffic           JSON-RPC method + tool name for the UI
@@ -58,7 +58,7 @@ The server factory runs once per HTTP request, so no session state leaks between
 
 ### B. Simulator chat turn
 
-```
+```text
 POST /api/chat { sessionId, message }
   → token lookup
   → session transcript + ScriptedState
@@ -80,7 +80,7 @@ The planner is an MCP client like any other. It has no back door to the store. T
 
 One JSON file holds the whole household:
 
-```
+```text
 household   people   pets   clinics
 medications careLogs exposures outbox confirmations audit
 ```
@@ -117,6 +117,7 @@ The pipeline is ordered and each step can only raise the floor:
 The `decided` flag is what prevents a dose band from downgrading a gate. A cat exposed to xylitol does not become `monitor` because the mg/kg happens to fall in the first band.
 
 Each assessment carries:
+
 - `verdict`, `headline`, `summary`
 - `dosePerKg`, `doseUnit`, `amount.normalised`
 - `threshold`, `nextThreshold`, `scale` (all published bands, for the UI dose scale)
@@ -145,10 +146,10 @@ The sitter has `read`, `log` and `notify`, so Noah can assess an exposure and te
 
 ## Authentication and scopes
 
-| Token | Client | Scopes |
-|---|---|---|
-| `OWNER_TOKEN` | `maya` | `vetwise.read`, `vetwise.log`, `vetwise.write`, `vetwise.notify` |
-| `SITTER_TOKEN` | `noah` | `vetwise.read`, `vetwise.log`, `vetwise.notify` |
+| Token          | Client | Scopes                                                           |
+| -------------- | ------ | ---------------------------------------------------------------- |
+| `OWNER_TOKEN`  | `maya` | `vetwise.read`, `vetwise.log`, `vetwise.write`, `vetwise.notify` |
+| `SITTER_TOKEN` | `noah` | `vetwise.read`, `vetwise.log`, `vetwise.notify`                  |
 
 - Missing or unknown bearer → `401` with `WWW-Authenticate`.
 - The MCP endpoint rejects unknown `Host` headers when `ALLOWED_HOSTS` is set (DNS-rebinding protection).

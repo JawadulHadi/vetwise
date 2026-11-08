@@ -15,10 +15,10 @@ Vetwise is built for the ten minutes after a pet eats something wrong: a dog int
 ```bash
 npm install
 cp .env.example .env        # optional; every value has a working demo default
-npm start                   # http://127.0.0.1:8787
+npm start                   # http://127.0.0.1:3000
 ```
 
-Open <http://127.0.0.1:8787>. The demo clock is frozen at **21:40**; the household has two pets and two doses still due. The page is a simulator: every answer it shows came from a real JSON-RPC `tools/call` against `/mcp`, and the traffic panel lists those calls.
+Open <http://127.0.0.1:3000>. The demo clock is frozen at **21:40**; the household has two pets and two doses still due. The page is a simulator: every answer it shows came from a real JSON-RPC `tools/call` against `/mcp`, and the traffic panel lists those calls.
 
 Suggested first line: **“What's due tonight?”**
 
@@ -26,15 +26,15 @@ The full scripted walkthrough is in [docs/DEMO.md](docs/DEMO.md).
 
 ### Demo household
 
-| | |
-|---|---|
-| Household | The Chen–Patel house, Sacramento, CA |
-| Owner | Maya Chen — read, log, write, notify |
-| Sitter | Noah Patel — read, log, notify (no record changes) |
-| Dog | Mochi, Pembroke Welsh Corgi, 5 y, 13.6 kg |
-| Cat | Juniper, Domestic Shorthair, 9 y, 4.6 kg |
-| Primary vet | Cedar Creek Animal Hospital (Dr. Priya Raman) — `+1-916-555-0142` |
-| Emergency | Sacramento Veterinary Emergency & Specialty — `+1-916-555-0199` |
+|                |                                                                    |
+| -------------- | ------------------------------------------------------------------ |
+| Household      | The Chen–Patel house, Sacramento, CA                               |
+| Owner          | Maya Chen — read, log, write, notify                               |
+| Sitter         | Noah Patel — read, log, notify (no record changes)                 |
+| Dog            | Mochi, Pembroke Welsh Corgi, 5 y, 13.6 kg                          |
+| Cat            | Juniper, Domestic Shorthair, 9 y, 4.6 kg                           |
+| Primary vet    | Cedar Creek Animal Hospital (Dr. Priya Raman) — `+1-916-555-0142`  |
+| Emergency      | Sacramento Veterinary Emergency & Specialty — `+1-916-555-0199`    |
 | Poison control | ASPCA APCC `(888) 426-4435` · Pet Poison Helpline `(855) 764-7661` |
 
 ---
@@ -43,17 +43,17 @@ The full scripted walkthrough is in [docs/DEMO.md](docs/DEMO.md).
 
 ### 9 MCP tools
 
-| Tool | Scope | What it does |
-|---|---|---|
-| `get_household` | `read` | People, pets, clinics in one call |
-| `get_pet` | `read` | One pet, every medicine including stopped ones, today's care |
-| `get_care_summary` | `read` | Taken / skipped / missed / due / upcoming for a day |
-| `list_medications` | `read` | Filter by pet; `status: "all"` really means all |
-| `assess_toxin_exposure` | `read` (+ `log` to record) | The safety engine: verdict, dose math, cited evidence |
-| `log_care_event` | `log` | Medication, symptom, weight or note; never guesses a slot |
-| `propose_record_change` | `write` | Phase one: mint a single-use confirmation token |
-| `apply_record_change` | `write` | Phase two: apply the token after an explicit yes |
-| `alert_caregiver` | `notify` | Queue a message to a person already on the record |
+| Tool                    | Scope                      | What it does                                                 |
+| ----------------------- | -------------------------- | ------------------------------------------------------------ |
+| `get_household`         | `read`                     | People, pets, clinics in one call                            |
+| `get_pet`               | `read`                     | One pet, every medicine including stopped ones, today's care |
+| `get_care_summary`      | `read`                     | Taken / skipped / missed / due / upcoming for a day          |
+| `list_medications`      | `read`                     | Filter by pet; `status: "all"` really means all              |
+| `assess_toxin_exposure` | `read` (+ `log` to record) | The safety engine: verdict, dose math, cited evidence        |
+| `log_care_event`        | `log`                      | Medication, symptom, weight or note; never guesses a slot    |
+| `propose_record_change` | `write`                    | Phase one: mint a single-use confirmation token              |
+| `apply_record_change`   | `write`                    | Phase two: apply the token after an explicit yes             |
+| `alert_caregiver`       | `notify`                   | Queue a message to a person already on the record            |
 
 ### 6 resources
 
@@ -112,17 +112,17 @@ Both paths call the same MCP tools over the same transport. The UI badge says wh
 
 Copy `.env.example` to `.env`. The values that matter:
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `PORT` / `HOST` | `8787` / `127.0.0.1` | HTTP listener |
-| `PUBLIC_BASE_URL` | `http://127.0.0.1:8787` | URL the simulator uses to reach its own `/mcp` |
-| `VETWISE_DATA` | `./data/db.json` | JSON store; delete to reseed the demo |
-| `DEMO_CLOCK` | unset (real time) | `21:40` freezes the demo narrative; ISO timestamps also accepted |
-| `OWNER_TOKEN` | `maya-owner-demo-token` | Owner bearer token |
-| `SITTER_TOKEN` | `noah-sitter-demo-token` | Sitter bearer token |
-| `VETWISE_AGENT` | `scripted` when no credentials | `scripted` or `bedrock` |
-| `ALLOWED_HOSTS` | empty | Required behind a tunnel; prevents DNS rebinding |
-| `CAREGIVER_WEBHOOK_URL` | empty | If set, alerts are POSTed and delivery is recorded |
+| Variable                | Default                        | Purpose                                                          |
+| ----------------------- | ------------------------------ | ---------------------------------------------------------------- |
+| `PORT` / `HOST`         | `3000` / `127.0.0.1`           | HTTP listener                                                    |
+| `PUBLIC_BASE_URL`       | `http://127.0.0.1:3000`        | URL the simulator uses to reach its own `/mcp`                   |
+| `VETWISE_DATA`          | `./data/db.json`               | JSON store; delete to reseed the demo                            |
+| `DEMO_CLOCK`            | unset (real time)              | `21:40` freezes the demo narrative; ISO timestamps also accepted |
+| `OWNER_TOKEN`           | `maya-owner-demo-token`        | Owner bearer token                                               |
+| `SITTER_TOKEN`          | `noah-sitter-demo-token`       | Sitter bearer token                                              |
+| `VETWISE_AGENT`         | `scripted` when no credentials | `scripted` or `bedrock`                                          |
+| `ALLOWED_HOSTS`         | empty                          | Required behind a tunnel; prevents DNS rebinding                 |
+| `CAREGIVER_WEBHOOK_URL` | empty                          | If set, alerts are POSTed and delivery is recorded               |
 
 Run with an env file if you prefer:
 

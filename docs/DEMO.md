@@ -12,7 +12,7 @@ npm run check          # optional but reassuring: 17 unit tests + transport smok
 npm start
 ```
 
-Open <http://127.0.0.1:8787>. The server prints the two demo tokens and the data file it is using. The clock is frozen at **9:40 PM** by `DEMO_CLOCK=21:40`; the seeded household has two doses still due.
+Open <http://127.0.0.1:3000>. The server prints the two demo tokens and the data file it is using. The clock is frozen at **9:40 PM** by `DEMO_CLOCK=21:40`; the seeded household has two doses still due.
 
 **Reset between takes:**
 
@@ -30,15 +30,15 @@ The screenshot used in the README lives at `docs/screenshots/demo.png`. Regenera
 
 ## The 90-second version
 
-| # | Say | What it proves |
-|---|---|---|
-| 1 | “What's due tonight?” | The server owns the record; two doses are due |
-| 2 | “Mochi got into my 65% dark chocolate. She ate about 40 grams.” | Species + weight + product + dose math + cited evidence |
-| 3 | “Now she's drooling and shaky.” | Symptoms re-run the same exposure and escalate to emergency |
-| 4 | “Text Maya the summary.” | Alerts stay inside the household |
-| 5 | “Stop Mochi's carprofen — the vet said to.” | Phase one: nothing changes yet |
-| 6 | click **Yes, apply it** (or say “yes”) | Phase two: the token is applied once |
-| 7 | switch identity to **Noah Patel (sitter)** and repeat step 5 | `vetwise.write` is missing; the record is safe |
+| #   | Say                                                             | What it proves                                              |
+| --- | --------------------------------------------------------------- | ----------------------------------------------------------- |
+| 1   | “What's due tonight?”                                           | The server owns the record; two doses are due               |
+| 2   | “Mochi got into my 65% dark chocolate. She ate about 40 grams.” | Species + weight + product + dose math + cited evidence     |
+| 3   | “Now she's drooling and shaky.”                                 | Symptoms re-run the same exposure and escalate to emergency |
+| 4   | “Text Maya the summary.”                                        | Alerts stay inside the household                            |
+| 5   | “Stop Mochi's carprofen — the vet said to.”                     | Phase one: nothing changes yet                              |
+| 6   | click **Yes, apply it** (or say “yes”)                          | Phase two: the token is applied once                        |
+| 7   | switch identity to **Noah Patel (sitter)** and repeat step 5    | `vetwise.write` is missing; the record is safe              |
 
 ---
 
@@ -58,9 +58,10 @@ The transcript shows one chip: `get_care_summary`. The left column shows the sam
 
 **Say:** `Mochi got into my 65% dark chocolate. She ate about 40 grams.`
 
-> Call your veterinarian about Mochi now. 404 mg for a 13.6 kg dog is about **29.71 mg/kg** methylxanthines. That falls in the “Mild methylxanthine signs expected” band, which starts at 20 mg/kg methylxanthines. Call Cedar Creek Animal Hospital (Dr. Priya Raman) at +1-916-555-0142; if it is closed, call Sacramento Veterinary Emergency & Specialty. Source: Merck Veterinary Manual — https://www.merckvetmanual.com/toxicology/food-hazards/chocolate-toxicosis-in-animals. This is on the household record.
+> Call your veterinarian about Mochi now. 404 mg for a 13.6 kg dog is about **29.71 mg/kg** methylxanthines. That falls in the “Mild methylxanthine signs expected” band, which starts at 20 mg/kg methylxanthines. Call Cedar Creek Animal Hospital (Dr. Priya Raman) at +1-916-555-0142; if it is closed, call Sacramento Veterinary Emergency & Specialty. Source: Merck Veterinary Manual — <https://www.merckvetmanual.com/toxicology/food-hazards/chocolate-toxicosis-in-animals>. This is on the household record.
 
 The verdict card in the right column shows:
+
 - verdict **Call your vet**
 - the dose math (`29.71 mg/kg` from 404 mg ÷ 13.6 kg)
 - the dose scale with the marker between 20 and 40 mg/kg
@@ -113,6 +114,7 @@ Switch the identity picker in the header to **Noah Patel (pet sitter)**. The sco
 > This token is missing the vetwise.write scope. Ask Maya, the account owner, for access.
 
 Noah can still:
+
 - ask what is due
 - assess an exposure (which records it, because Noah has `log`)
 - text Maya (because Noah has `notify`)
@@ -133,13 +135,13 @@ The left column marks the 9:00 PM dose taken; “What's due tonight?” now repo
 
 Try any of these:
 
-| Say | Expected |
-|---|---|
-| `Mochi ate some chocolate.` | `unverified` — product and amount missing; asks for both |
-| `Juniper ate a lily.` | `emergency` — any feline exposure, no amount requested |
-| `Mochi ate a grape.` | `call_vet` — any exposure; emergency at ≥ 1 grape per 4.5 kg |
-| `Can I give Mochi ibuprofen?` | `call_vet` with a “Do not give…” headline, no dose |
-| `Mochi got into glitter glue.` | `unverified` — outside the catalogue, never reassuring |
+| Say                                     | Expected                                                                      |
+| --------------------------------------- | ----------------------------------------------------------------------------- |
+| `Mochi ate some chocolate.`             | `unverified` — product and amount missing; asks for both                      |
+| `Juniper ate a lily.`                   | `emergency` — any feline exposure, no amount requested                        |
+| `Mochi ate a grape.`                    | `call_vet` — any exposure; emergency at ≥ 1 grape per 4.5 kg                  |
+| `Can I give Mochi ibuprofen?`           | `call_vet` with a “Do not give…” headline, no dose                            |
+| `Mochi got into glitter glue.`          | `unverified` — outside the catalogue, never reassuring                        |
 | `Mochi ate 3 pieces of sugar-free gum.` | `call_vet` or `emergency` depending on the 13.6 kg dose; xylitol is dogs only |
 
 The point of the demo is not that Vetwise always has an answer. It is that Vetwise never turns a missing fact into reassurance.
@@ -163,15 +165,15 @@ The microphone button uses the browser's `SpeechRecognition`; spoken replies use
 
 ## Troubleshooting
 
-| Symptom | Fix |
-|---|---|
-| The page loads but every call is 401 | Use one of the tokens printed at startup, or the identity picker |
-| “I have no verified toxicosis record…” | The substance is outside the 24-entry catalogue — intentional |
-| The demo already has exposures / stopped medicines | Delete `data/db.json` and restart |
-| Port 8787 is busy | `PORT=8788 npm start`, or stop the old process |
-| The demo clock shows the real time | Set `DEMO_CLOCK=21:40` before `npm start` |
-| Bedrock is unreachable | Set `VETWISE_AGENT=scripted`; the fallback also labels the answer |
-| Chat works but the traffic panel is empty | Reload after the first message; the panel polls `/api/state` |
+| Symptom                                            | Fix                                                               |
+| -------------------------------------------------- | ----------------------------------------------------------------- |
+| The page loads but every call is 401               | Use one of the tokens printed at startup, or the identity picker  |
+| “I have no verified toxicosis record…”             | The substance is outside the 24-entry catalogue — intentional     |
+| The demo already has exposures / stopped medicines | Delete `data/db.json` and restart                                 |
+| Port 3000 is busy                                  | `PORT=8788 npm start`, or stop the old process                    |
+| The demo clock shows the real time                 | Set `DEMO_CLOCK=21:40` before `npm start`                         |
+| Bedrock is unreachable                             | Set `VETWISE_AGENT=scripted`; the fallback also labels the answer |
+| Chat works but the traffic panel is empty          | Reload after the first message; the panel polls `/api/state`      |
 
 ---
 

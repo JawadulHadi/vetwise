@@ -6,13 +6,13 @@ Vetwise is triage, not diagnosis, and not a prescription. The person using it is
 
 ## 1. Five verdicts, one of which is "I don't know"
 
-| Verdict | What it means | What the person should do |
-|---|---|---|
-| `emergency` | Signs or exposure warrant immediate emergency care | Go now, or call the emergency clinic and poison control on the way |
-| `call_vet` | A real toxicosis risk that needs a veterinarian's judgement | Call the primary vet now; use the emergency clinic if closed |
-| `monitor` | Below the first published toxic range, or low concern | Watch for named signs; call if they appear |
-| `no_known_toxicity` | *Reserved.* Not currently reachable for the 24 catalogued toxins | — |
-| `unverified` | A required fact is missing or the substance is outside the catalogue | Get the missing fact, or call poison control now |
+| Verdict             | What it means                                                        | What the person should do                                          |
+| ------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `emergency`         | Signs or exposure warrant immediate emergency care                   | Go now, or call the emergency clinic and poison control on the way |
+| `call_vet`          | A real toxicosis risk that needs a veterinarian's judgement          | Call the primary vet now; use the emergency clinic if closed       |
+| `monitor`           | Below the first published toxic range, or low concern                | Watch for named signs; call if they appear                         |
+| `no_known_toxicity` | *Reserved.* Not currently reachable for the 24 catalogued toxins     | —                                                                  |
+| `unverified`        | A required fact is missing or the substance is outside the catalogue | Get the missing fact, or call poison control now                   |
 
 `unverified` is a **successful** answer. It is never softened into "probably fine", and it always carries a concrete next step: get a weight, read the package, say whether the pet is a dog or a cat, or call the vet/poison control.
 
@@ -24,13 +24,13 @@ Every published band in the catalogue starts at `0` and resolves to `monitor` or
 
 ## 2. Missing facts never become reassurance
 
-| Missing fact | Result |
-|---|---|
-| Species | `unverified` — "I need to know whether Mochi is a dog or a cat." |
-| Weight | `unverified` — "I need Mochi's current weight." |
-| Amount | `unverified`, unless the toxin has an explicit any-exposure rule |
-| Product (for a mass exposure) | `unverified` — white chocolate and a 65% bar are not the same question |
-| Substance not in the catalogue | `unverified` — "I don't have a verified toxicosis record for X." |
+| Missing fact                   | Result                                                                 |
+| ------------------------------ | ---------------------------------------------------------------------- |
+| Species                        | `unverified` — "I need to know whether Mochi is a dog or a cat."       |
+| Weight                         | `unverified` — "I need Mochi's current weight."                        |
+| Amount                         | `unverified`, unless the toxin has an explicit any-exposure rule       |
+| Product (for a mass exposure)  | `unverified` — white chocolate and a 65% bar are not the same question |
+| Substance not in the catalogue | `unverified` — "I don't have a verified toxicosis record for X."       |
 
 The engine returns the rationale in `summary` and a finding that names the gap. The headline is specific, not generic.
 
@@ -44,12 +44,12 @@ A toxin with only a canine record (xylitol, grapes, macadamia) returns `unverifi
 
 Four toxins escalate before any amount is requested:
 
-| Toxin | Floor |
-|---|---|
+| Toxin              | Floor                                                           |
+| ------------------ | --------------------------------------------------------------- |
 | Grapes and raisins | `call_vet` on any exposure; `emergency` at ≥ 1 grape per 4.5 kg |
-| True lily (cats) | `emergency` on any exposure, including pollen and vase water |
-| Rodenticide | `emergency` on any exposure |
-| Ethylene glycol | `emergency` on any exposure |
+| True lily (cats)   | `emergency` on any exposure, including pollen and vase water    |
+| Rodenticide        | `emergency` on any exposure                                     |
+| Ethylene glycol    | `emergency` on any exposure                                     |
 
 The tool description and the server instructions say this explicitly, so a host does not ask "how much?" before telling the person to act. Permethrin is a fifth high-risk class with a species-specific floor: any feline exposure is an `emergency` band; any canine exposure is at least `call_vet`.
 
@@ -72,7 +72,7 @@ Escalation is recorded in `escalation: { reason, from, to }` so the UI can show 
 
 The engine evaluates gates first (species, intent, amount, weight, product) and bands afterwards. A `decided` flag records that a gate has already set the floor. Later bands may call `setVerdict`, which only moves upward in the rank order:
 
-```
+```text
 emergency > call_vet > monitor > no_known_toxicity > unverified
 ```
 
@@ -106,6 +106,7 @@ The engine and the prompts never:
 `firstAid` on a toxin record contains only record-level first steps (move the pet away, keep the package, wash off a topical product with lukewarm water and mild soap, call the vet). It is labelled "First steps on the record" in the UI, not "treatment".
 
 Every non-trivial answer names:
+
 - the primary vet and phone
 - the emergency clinic
 - ASPCA APCC `(888) 426-4435`
@@ -117,13 +118,13 @@ The rendered-text test asserts that a clinic number and poison control appear an
 
 ## 8. Record changes are two-phase and caller-bound
 
-| Step | Guarantee |
-|---|---|
-| Propose | Requires `vetwise.write`; validates the action and payload; stores only a SHA-256 hash of the token |
-| Read back | The response includes a human summary and the expiry time |
-| Confirm | The host must get an explicit yes from the person |
-| Apply | Same `clientId`, unexpired, unused; the token is marked used only after the mutation succeeds |
-| Replay | Rejected with "That confirmation code was already used. Ask me to prepare the change again." |
+| Step      | Guarantee                                                                                           |
+| --------- | --------------------------------------------------------------------------------------------------- |
+| Propose   | Requires `vetwise.write`; validates the action and payload; stores only a SHA-256 hash of the token |
+| Read back | The response includes a human summary and the expiry time                                           |
+| Confirm   | The host must get an explicit yes from the person                                                   |
+| Apply     | Same `clientId`, unexpired, unused; the token is marked used only after the mutation succeeds       |
+| Replay    | Rejected with "That confirmation code was already used. Ask me to prepare the change again."        |
 
 A sitter cannot stop a medicine. The sitter token has `read`, `log` and `notify`; the tool error names the missing `vetwise.write` scope. The smoke test asserts both the denial and the owner's successful apply.
 
