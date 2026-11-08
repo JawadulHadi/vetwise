@@ -4,7 +4,10 @@ All notable changes to Vetwise are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0] — 2026-11-08
+
+First public cut: one household, dogs and cats, nine tools. The review hardening
+below shipped in the same release.
 
 ### Security
 
@@ -61,13 +64,6 @@ All notable changes to Vetwise are recorded here. The format follows
   catalogue-correction form that requires a citable source.
 - A delete/erase request is refused explicitly: the MCP surface has no delete
   tool.
-
-## [0.1.0] — 2026-11-08
-
-First public cut: one household, dogs and cats, nine tools.
-
-### Added
-
 - **MCP server** over Streamable HTTP at `/mcp`, with a fresh server instance per
   request and bearer-token authentication.
 - **Nine tools**: `get_household`, `get_pet`, `get_care_summary`,
@@ -96,5 +92,4 @@ First public cut: one household, dogs and cats, nine tools.
 - **Tests**: 17 safety-engine unit tests and an end-to-end transport smoke test.
 - **Docs**: architecture, safety policy, toxin catalogue, demo script.
 
-[Unreleased]: https://github.com/JawadulHadi/vetwise/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/JawadulHadi/vetwise/releases/tag/v0.1.0
