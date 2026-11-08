@@ -128,19 +128,19 @@ Both paths call the same MCP tools over the same transport. The UI badge says wh
 
 Copy `.env.example` to `.env`. The values that matter:
 
-| Variable                | Default                        | Purpose                                                          |
-| ----------------------- | ------------------------------ | ---------------------------------------------------------------- |
-| `PORT` / `HOST`         | `3000` / `127.0.0.1`           | HTTP listener                                                    |
-| `PUBLIC_BASE_URL`       | `http://127.0.0.1:3000`        | URL the simulator uses to reach its own `/mcp`                   |
-| `VETWISE_DATA`          | `./data/db.json`               | JSON store; delete to reseed the demo                            |
-| `DEMO_CLOCK`            | unset (real time)              | `21:40` freezes the demo narrative; refused when `NODE_ENV=production` |
-| `OWNER_TOKEN`           | demo token when `VETWISE_DEMO` | Owner bearer token — required outside demo mode                  |
-| `SITTER_TOKEN`          | demo token when `VETWISE_DEMO` | Sitter bearer token — required outside demo mode                 |
-| `VETWISE_DEMO`          | `1` unless `NODE_ENV=production` | Allow the published demo tokens; set `0` to require real ones    |
-| `VETWISE_AGENT`         | `scripted` when no credentials | `scripted` or `bedrock`                                          |
-| `BEDROCK_MODEL_ID`      | `amazon.nova-lite-v1:0`        | Required when `VETWISE_AGENT=bedrock`                            |
-| `ALLOWED_HOSTS`         | empty                          | Required behind a tunnel; prevents DNS rebinding                 |
-| `CAREGIVER_WEBHOOK_URL` | empty                          | If set, alerts are POSTed and delivery is recorded               |
+| Variable                | Default                          | Purpose                                                                |
+| ----------------------- | -------------------------------- | ---------------------------------------------------------------------- |
+| `PORT` / `HOST`         | `3000` / `127.0.0.1`             | HTTP listener                                                          |
+| `PUBLIC_BASE_URL`       | `http://127.0.0.1:3000`          | URL the simulator uses to reach its own `/mcp`                         |
+| `VETWISE_DATA`          | `./data/db.json`                 | JSON store; delete to reseed the demo                                  |
+| `DEMO_CLOCK`            | unset (real time)                | `21:40` freezes the demo narrative; refused when `NODE_ENV=production` |
+| `OWNER_TOKEN`           | demo token when `VETWISE_DEMO`   | Owner bearer token — required outside demo mode                        |
+| `SITTER_TOKEN`          | demo token when `VETWISE_DEMO`   | Sitter bearer token — required outside demo mode                       |
+| `VETWISE_DEMO`          | `1` unless `NODE_ENV=production` | Allow the published demo tokens; set `0` to require real ones          |
+| `VETWISE_AGENT`         | `scripted` when no credentials   | `scripted` or `bedrock`                                                |
+| `BEDROCK_MODEL_ID`      | `amazon.nova-lite-v1:0`          | Required when `VETWISE_AGENT=bedrock`                                  |
+| `ALLOWED_HOSTS`         | empty                            | Required behind a tunnel; prevents DNS rebinding                       |
+| `CAREGIVER_WEBHOOK_URL` | empty                            | If set, alerts are POSTed and delivery is recorded                     |
 
 Run with an env file if you prefer:
 
