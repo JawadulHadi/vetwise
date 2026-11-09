@@ -7,6 +7,7 @@ import { owner, petName } from '../domain/care.js';
 import { publishableState } from '../mcp/auth.js';
 import type { Store } from '../store/store.js';
 import { listTraffic } from './traffic.js';
+import { currentEpoch, EPOCH_HEADER, requestStartEpoch } from './fence.js';
 import { rawTokenFromHeader, tokenFromHeader } from './auth.js';
 
 export interface ChatTurn {
@@ -22,7 +23,7 @@ interface Session {
 }
 
 /** Set by the public-demo reset timer so the simulator can say when it resets. */
-export const demoReset: { minutes: number; nextAt?: string } = { minutes: 0 };
+export const demoReset: { minutes: number; nextAt?: string; failed?: boolean } = { minutes: 0 };
 
 const SESSION_TTL_MS = 30 * 60_000;
 const MAX_SESSIONS = 200;
@@ -108,9 +109,12 @@ export function chatHandler(store: Store) {
     }
 
     const session = sessionFor(record.clientId, body?.sessionId?.slice(0, 64) || 'default');
+    const startedIn = requestStartEpoch() ?? currentEpoch();
 
     try {
-      const result = await withMcpClient({ url: `${config.publicBaseUrl}/mcp`, token: rawToken }, (client) =>
+      const result = await withMcpClient(
+        { url: `${config.publicBaseUrl}/mcp`, token: rawToken, headers: { [EPOCH_HEADER]: String(startedIn) } },
+        (client) =>
         runAgent({
           client,
           message,
@@ -119,6 +123,16 @@ export function chatHandler(store: Store) {
           scriptedState: session.scripted,
         }),
       );
+
+      if (startedIn !== currentEpoch()) {
+        // The public demo reset mid-turn: its writes were refused and its
+        // session is gone, so the reply would describe a household that no longer exists.
+        res.status(409).json({
+          reply: 'The public demo just reset to its starting household. Please ask again.',
+          steps: [],
+        });
+        return;
+      }
 
       session.turns.push({ role: 'user', text: `${record.label}: ${message}` }, { role: 'assistant', text: result.reply });
       session.turns = session.turns.slice(-16);

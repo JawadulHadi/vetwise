@@ -153,7 +153,7 @@ node --env-file=.env --import tsx src/index.ts
 
 ## Deploy a public demo
 
-A hosted demo lets a buyer try every tool, writes included, from a link. Strangers will change the record, so a public demo turns on the reset: the household, chat transcripts and traffic panel are reseeded every `VETWISE_DEMO_RESET_MINUTES`, and the simulator shows a "Public demo · resets in N min" notice.
+A hosted demo lets a buyer try every tool, writes included, from a link. Strangers will change the record, so a public demo turns on the reset: the household, chat transcripts and traffic panel are reseeded every `VETWISE_DEMO_RESET_MINUTES`, and the simulator shows a "Public demo · resets in N min" notice. Requests still running when a reset fires cannot write into the fresh household, and if a reset cannot be saved, `/healthz` answers 503 and the demo refuses requests until the next attempt succeeds.
 
 **Render (one click).** `render.yaml` describes a free Docker web service with the demo clock at 21:40 and a 30-minute reset. In Render choose *New → Blueprint*, pick this repository, and deploy.
 

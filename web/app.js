@@ -642,15 +642,26 @@ function renderTraffic(state) {
   }
 }
 
+/** Last reset schedule the server published; the notice ticks from it between state refreshes. */
+let lastDemo = null;
+
 /** Public demos reseed on a timer; say so, so a visitor's edits vanishing is no surprise. */
 function renderDemoReset(demo) {
+  lastDemo = demo ?? null;
   if (!demo?.nextResetAt) {
     els.demoReset.hidden = true;
     return;
   }
-  const minutes = Math.max(0, Math.ceil((Date.parse(demo.nextResetAt) - Date.now()) / 60_000));
+  const remainingMs = Date.parse(demo.nextResetAt) - Date.now();
+  const minutes = Math.ceil(remainingMs / 60_000);
+  // Past the published time: the reset is running or the next schedule has not
+  // arrived yet. Say so until a fresh time comes in, rather than a stale countdown.
   els.demoReset.textContent =
-    minutes <= 1 ? 'Public demo · resets in under a minute' : `Public demo · resets in ${minutes} min`;
+    !(remainingMs > 0)
+      ? 'Public demo · resetting now'
+      : minutes <= 1
+        ? 'Public demo · resets in under a minute'
+        : `Public demo · resets in ${minutes} min`;
   els.demoReset.title = `Shared demo household. Every change is wiped every ${demo.resetMinutes} minutes.`;
   els.demoReset.hidden = false;
 }
@@ -824,6 +835,10 @@ async function boot() {
   setInterval(() => {
     if (!ui.busy) void refreshState();
   }, 20_000);
+  // The reset notice keeps counting even while a chat turn holds the state refresh.
+  setInterval(() => {
+    if (lastDemo) renderDemoReset(lastDemo);
+  }, 15_000);
 }
 
 void boot();

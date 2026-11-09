@@ -9,6 +9,7 @@ import { config } from './config.js';
 import { chatHandler, clearSessions, demoReset, stateHandler } from './http/chat.js';
 import { bearerAuth, optionalAuth } from './http/auth.js';
 import { rateLimit } from './http/limits.js';
+import { fenceRequest } from './http/fence.js';
 import { clearTraffic, recordTraffic } from './http/traffic.js';
 import { createServerFactory } from './mcp/server.js';
 import { Store } from './store/store.js';
@@ -57,20 +58,33 @@ app.use((_req, res, next) => {
 // The MCP endpoint: bearer token → traffic log → Streamable HTTP handler.
 // Scopes are re-checked inside every tool, resource and prompt, so a token that
 // reaches this far still cannot write outside what it was granted.
-app.all('/mcp', bearerAuth, recordTraffic, (req, res) => {
+app.all('/mcp', demoInService, fenceRequest, bearerAuth, recordTraffic, (req, res) => {
   void nodeHandler(req, res, req.body);
 });
 
 // Liveness only. Version, agent mode and model are deliberately not public:
 // they fingerprint the deployment, and nothing needs them over the wire.
 app.get('/healthz', (_req, res) => {
+  if (demoReset.failed) {
+    res.status(503).json({ ok: false, time: new Date().toISOString() });
+    return;
+  }
   res.json({ ok: true, time: new Date().toISOString() });
 });
 
+/** While a failed public-demo reset is unresolved, the demo is out of service. */
+function demoInService(_req: express.Request, res: express.Response, next: express.NextFunction): void {
+  if (demoReset.failed) {
+    res.status(503).json({ error: 'The public demo is resetting. Try again in a minute.' });
+    return;
+  }
+  next();
+}
+
 // Each chat turn can cost several model calls, so the budget is per bearer
 // token rather than per IP: a shared office address does not pool its limit.
-app.post('/api/chat', rateLimit({ windowMs: 60_000, max: 20, scope: 'chat' }), chatHandler(store));
-app.get('/api/state', rateLimit({ windowMs: 60_000, max: 240, scope: 'state' }), stateHandler(store));
+app.post('/api/chat', demoInService, fenceRequest, rateLimit({ windowMs: 60_000, max: 20, scope: 'chat' }), chatHandler(store));
+app.get('/api/state', demoInService, rateLimit({ windowMs: 60_000, max: 240, scope: 'state' }), stateHandler(store));
 app.get('/api/whoami', optionalAuth, (req, res) => {
   // This reflects the token that was actually presented — never a hard-coded
   // or empty answer, so the simulator can always show who is speaking.
@@ -116,23 +130,37 @@ if (agentMode() === 'bedrock') await assertBedrockReady();
 
 // Public demo: reseed the household, and drop transcripts and the traffic log,
 // on a fixed interval so one visitor's changes never become the next one's story.
+// The next reset is scheduled only after this one has finished, so resets can
+// never pile up in the write queue ahead of visitors' writes.
 let resetTimer: NodeJS.Timeout | undefined;
 if (config.demoResetMinutes > 0) {
   const intervalMs = config.demoResetMinutes * 60_000;
   demoReset.minutes = config.demoResetMinutes;
-  demoReset.nextAt = new Date(Date.now() + intervalMs).toISOString();
-  resetTimer = setInterval(() => {
-    demoReset.nextAt = new Date(Date.now() + intervalMs).toISOString();
-    store
-      .reset(seedDatabase)
-      .then(() => {
-        clearSessions();
-        clearTraffic();
-        console.log('[vetwise] public demo reset — household reseeded');
-      })
-      .catch((error: unknown) => console.error('[vetwise] public demo reset failed', error));
-  }, intervalMs);
-  resetTimer.unref();
+  const scheduleReset = (delayMs: number): void => {
+    demoReset.nextAt = new Date(Date.now() + delayMs).toISOString();
+    resetTimer = setTimeout(() => {
+      store
+        .reset(seedDatabase)
+        .then(() => {
+          demoReset.failed = false;
+          console.log('[vetwise] public demo reset — household reseeded');
+        })
+        .catch((error: unknown) => {
+          // Out of service until a reset succeeds: /healthz reports 503 and the
+          // demo routes refuse, so no visitor sees state that was meant to be wiped.
+          demoReset.failed = true;
+          console.error('[vetwise] public demo reset failed; demo is out of service until a reset succeeds', error);
+        })
+        .finally(() => {
+          // Transcripts and traffic go either way; they are only ever in memory.
+          clearSessions();
+          clearTraffic();
+          scheduleReset(demoReset.failed ? Math.min(intervalMs, 30_000) : intervalMs);
+        });
+    }, delayMs);
+    resetTimer.unref();
+  };
+  scheduleReset(intervalMs);
 }
 
 const server = app.listen(config.port, config.host, () => {
@@ -152,7 +180,7 @@ const server = app.listen(config.port, config.host, () => {
 
 async function shutdown(signal: string): Promise<void> {
   console.log(`\n${signal} received — closing MCP handler and HTTP server.`);
-  if (resetTimer) clearInterval(resetTimer);
+  if (resetTimer) clearTimeout(resetTimer);
   await mcpHandler.close().catch(() => undefined);
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 3_000).unref();

@@ -9,7 +9,7 @@
  */
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
@@ -329,18 +329,33 @@ try {
     const state = async () =>
       (await (await fetch(`${demoBase}/api/state`, { headers: { Authorization: `Bearer ${OWNER}` } })).json()) as {
         outbox: unknown[];
+        care: { taken: number };
+        traffic: Array<{ tool?: string }>;
         demo?: { resetMinutes: number; nextResetAt: string };
       };
+    const demoClient = async (headers: Record<string, string> = {}) => {
+      const client = new Client({ name: 'vetwise-regress-demo', version: '0.1.0' });
+      await client.connect(
+        new StreamableHTTPClientTransport(new URL(`${demoBase}/mcp`), {
+          requestInit: { headers: { ...headers, Authorization: `Bearer ${OWNER}` } },
+        }),
+      );
+      return client;
+    };
+    const waitForReset = async (done: () => Promise<boolean>) => {
+      for (let attempt = 0; attempt < 40; attempt += 1) {
+        await sleep(250);
+        if (await done()) return true;
+      }
+      return false;
+    };
+
     const before = await state();
     assert.equal(before.demo?.resetMinutes, 0.05);
     assert.ok(!Number.isNaN(Date.parse(before.demo!.nextResetAt)));
 
-    const client = new Client({ name: 'vetwise-regress-demo', version: '0.1.0' });
-    await client.connect(
-      new StreamableHTTPClientTransport(new URL(`${demoBase}/mcp`), {
-        requestInit: { headers: { Authorization: `Bearer ${OWNER}` } },
-      }),
-    );
+    // Change two different parts of the household: the outbox and the care log.
+    const client = await demoClient();
     ok(
       (await client.callTool({
         name: 'alert_caregiver',
@@ -348,17 +363,63 @@ try {
       })) as StructuredToolResult,
       'alert_caregiver on the public demo',
     );
+    ok(
+      (await client.callTool({
+        name: 'log_care_event',
+        arguments: { pet: 'Mochi', kind: 'medication', medication: 'gabapentin', scheduledTime: '21:00' },
+      })) as StructuredToolResult,
+      'log_care_event on the public demo',
+    );
     await client.close();
-    assert.equal((await state()).outbox.length, before.outbox.length + 1);
+    const changed = await state();
+    assert.equal(changed.outbox.length, before.outbox.length + 1);
+    assert.equal(changed.care.taken, before.care.taken + 1);
 
-    let reset = false;
-    for (let attempt = 0; attempt < 30 && !reset; attempt += 1) {
-      await sleep(250);
-      reset = (await state()).outbox.length === before.outbox.length;
-    }
-    assert.ok(reset, 'the public demo did not reseed the household');
+    assert.ok(
+      await waitForReset(async () => {
+        const now = await state();
+        return now.outbox.length === before.outbox.length && now.care.taken === before.care.taken;
+      }),
+      'the public demo did not reseed the outbox and the care log',
+    );
     assert.match(demo.output(), /public demo reset/);
     console.log('✓ public demo reseeds the household on its timer and says when');
+
+    // A request that started before the latest reset cannot write into the
+    // reseeded household or its traffic log. The chat route's self-call marks
+    // its start epoch the same way; epoch 0 is always before a reset.
+    const stale = await demoClient({ 'x-vetwise-demo-epoch': '0' });
+    const refused = (await stale.callTool({
+      name: 'alert_caregiver',
+      arguments: { to: 'Maya', body: 'Written before the reset.' },
+    })) as StructuredToolResult;
+    await stale.close();
+    assert.equal(refused.isError, true, 'a pre-reset write was accepted');
+    const fenced = await state();
+    assert.equal(fenced.outbox.length, before.outbox.length);
+    assert.ok(!fenced.traffic.some((entry) => entry.tool === 'alert_caregiver'), 'a pre-reset call reached the traffic log');
+    console.log('✓ public demo fences writes and traffic from requests that started before a reset');
+
+    // A reset that cannot be saved takes the demo out of service until one succeeds,
+    // and leaves no visitor transcript or traffic behind.
+    await rm(demoData, { force: true });
+    await mkdir(path.join(demoData, 'blocks-rename'), { recursive: true });
+    let down = false;
+    for (let attempt = 0; attempt < 40 && !down; attempt += 1) {
+      await sleep(250);
+      down = (await fetch(`${demoBase}/healthz`)).status === 503;
+    }
+    assert.ok(down, 'a failed reset left /healthz reporting healthy');
+    const blocked = await fetch(`${demoBase}/api/state`, { headers: { Authorization: `Bearer ${OWNER}` } });
+    assert.equal(blocked.status, 503);
+    await rm(demoData, { recursive: true, force: true });
+    let back = false;
+    for (let attempt = 0; attempt < 40 && !back; attempt += 1) {
+      await sleep(250);
+      back = (await fetch(`${demoBase}/healthz`)).ok;
+    }
+    assert.ok(back, 'the demo did not come back after a successful reset');
+    console.log('✓ a failed public-demo reset takes the demo out of service until a reset succeeds');
   } finally {
     await demo.stop();
   }
@@ -368,6 +429,12 @@ await expectStartupFailure(
   'VETWISE_DEMO_RESET_MINUTES is set while NODE_ENV=production',
   'production refuses the public-demo reset',
   PORT + 7,
+);
+await expectStartupFailure(
+  { VETWISE_DATA: dataFile, VETWISE_DEMO_RESET_MINUTES: '99999' },
+  'VETWISE_DEMO_RESET_MINUTES must be at most',
+  'a reset interval longer than a timer can wait is refused',
+  PORT + 8,
 );
 
 /* ---------------------------------------------------------------- #2, #19, #22 */

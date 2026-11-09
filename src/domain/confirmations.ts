@@ -27,7 +27,9 @@ export interface MintOptions {
 
 export async function mintConfirmation(store: Store, options: MintOptions): Promise<{ token: string; expiresAt: string }> {
   const token = `vw_${randomUUID().replaceAll('-', '')}`;
-  const createdAt = now();
+  // Wall time, not the demo clock: a frozen DEMO_CLOCK must never stop a
+  // confirmation from expiring.
+  const createdAt = new Date();
   const expiresAt = new Date(createdAt.getTime() + (options.ttlMinutes ?? 10) * 60_000).toISOString();
 
   await store.mutate((db) => {
@@ -69,7 +71,7 @@ export async function applyConfirmation<T>(store: Store, token: string, options:
     if (record.clientId !== options.clientId) {
       throw new ConfirmationError('That confirmation code belongs to a different caregiver.');
     }
-    if (new Date(record.expiresAt).getTime() < now().getTime()) {
+    if (new Date(record.expiresAt).getTime() < Date.now()) {
       throw new ConfirmationError('That confirmation code has expired. Ask me to prepare the change again.');
     }
 
