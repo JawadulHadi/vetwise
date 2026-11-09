@@ -36,6 +36,9 @@ All notable changes to Vetwise are recorded here. The format follows
   action instead of leaving the sitter at a dead end.
 - Switching identity no longer races: a slow reply for the previous token cannot
   repaint the header or wipe the new greeting.
+- A rejected pasted token now says the server did not accept it and points at
+  `OWNER_TOKEN`/`SITTER_TOKEN`; it no longer greets the visitor as
+  "Signed in as Paste a token…" or answers "Try again in a moment".
 
 ### Changed
 

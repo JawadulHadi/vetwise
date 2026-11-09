@@ -171,7 +171,7 @@ OWNER_TOKEN=<first value>
 SITTER_TOKEN=<second value>
 ```
 
-Restart the server. Startup prints only the first four characters of each token, so keep the values somewhere safe. The UI knows the two demo tokens; for your own pair choose **Paste a token…** in the picker once and it is remembered in `localStorage` for that browser. `VETWISE_DEMO=0` (or `NODE_ENV=production`) makes the server refuse to start without both values, and it rejects the published demo strings.
+Restart the server. Startup prints only the first four characters of each token, so keep the values somewhere safe. The UI knows the two demo tokens; for your own pair choose **Paste a token…** in the picker once and it is remembered in `localStorage` for that browser. A pasted token is only accepted if the server was started with that exact value — generating a string and pasting it into the UI does not register it. `VETWISE_DEMO=0` (or `NODE_ENV=production`) makes the server refuse to start without both values, and it rejects the published demo strings.
 
 ---
 

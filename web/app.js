@@ -728,6 +728,15 @@ function renderScopes(scopes) {
 
 function welcome(who) {
   els.transcript.replaceChildren();
+  // `who` is null when the server did not accept the bearer token. Saying
+  // "Signed in as Paste a token…" hides the real problem, so name it instead.
+  if (!who) {
+    appendTurn(
+      'assistant',
+      'I’m Vetwise, but this server did not accept that bearer token. A token only works if the server was started with it (OWNER_TOKEN or SITTER_TOKEN in .env) — pasting a freshly generated string is not enough. Fix the token or choose a demo identity in the picker.',
+    );
+    return;
+  }
   const label = who?.label ?? els.token.selectedOptions[0]?.textContent ?? 'this household';
   const role = who?.clientId ?? '';
   const scopeLine =
@@ -792,8 +801,15 @@ async function send(raw) {
     thinking.remove();
 
     if (!response.ok) {
+      if (response.status === 401) {
+        appendTurn(
+          'assistant',
+          'That bearer token was rejected. A token only works if the server was started with it (OWNER_TOKEN or SITTER_TOKEN in .env); editing .env needs a restart. Fix the token or choose a demo identity.',
+        );
+        toast('That token was rejected.');
+        return;
+      }
       appendTurn('assistant', data.reply ?? 'The household record could not be reached. Try again in a moment.');
-      if (response.status === 401) toast('That token was rejected.');
       return;
     }
 
