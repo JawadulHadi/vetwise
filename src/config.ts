@@ -71,8 +71,11 @@ const demoResetMinutes = rawReset ? Number(rawReset) : 0;
 if (rawReset && (!Number.isFinite(demoResetMinutes) || demoResetMinutes <= 0)) {
   throw new Error(`VETWISE_DEMO_RESET_MINUTES must be a positive number of minutes, got "${rawReset}".`);
 }
-if (demoResetMinutes * 60_000 > 2_147_483_647) {
-  throw new Error('VETWISE_DEMO_RESET_MINUTES exceeds Node’s maximum timer delay (2147483647 ms).');
+// setTimeout cannot wait longer than 2^31 - 1 ms (about 24.8 days); a longer
+// delay fires immediately, which would reseed the household in a tight loop.
+const MAX_RESET_MINUTES = Math.floor((2 ** 31 - 1) / 60_000);
+if (demoResetMinutes > MAX_RESET_MINUTES) {
+  throw new Error(`VETWISE_DEMO_RESET_MINUTES must be at most ${MAX_RESET_MINUTES} minutes, got "${rawReset}".`);
 }
 if (demoResetMinutes > 0 && isProduction) {
   throw new Error(

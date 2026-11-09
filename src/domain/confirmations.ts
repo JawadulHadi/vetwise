@@ -27,6 +27,8 @@ export interface MintOptions {
 
 export async function mintConfirmation(store: Store, options: MintOptions): Promise<{ token: string; expiresAt: string }> {
   const token = `vw_${randomUUID().replaceAll('-', '')}`;
+  // Wall time, not the demo clock: a frozen DEMO_CLOCK must never stop a
+  // confirmation from expiring.
   const createdAt = new Date();
   const expiresAt = new Date(createdAt.getTime() + (options.ttlMinutes ?? 10) * 60_000).toISOString();
 
