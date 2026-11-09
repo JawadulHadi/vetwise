@@ -10,6 +10,10 @@ services:
     envVars:
       - key: VETWISE_DEMO
         value: "1"
+      # The demo story starts at 21:40 with two doses still due. Confirmations
+      # expire on wall time, so the frozen clock does not keep them alive.
+      - key: DEMO_CLOCK
+        value: "21:40"
       - key: VETWISE_DEMO_RESET_MINUTES
         value: "30"
       - key: VETWISE_AGENT
