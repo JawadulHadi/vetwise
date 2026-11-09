@@ -25,6 +25,7 @@ export class StaleDemoRequestError extends Error {
   }
 }
 
+/** Returns the process-wide epoch advanced by successful household resets. */
 export function currentEpoch(): number {
   return epoch;
 }
@@ -39,6 +40,11 @@ export function requestStartEpoch(): number | undefined {
   return requestEpoch.getStore();
 }
 
+/**
+ * Runs downstream middleware in an async context stamped with the current epoch.
+ * Honors an older nonnegative integer epoch header from a chat self-call;
+ * missing, invalid, and future claims use the current epoch instead.
+ */
 export function fenceRequest(req: Request, _res: Response, next: NextFunction): void {
   const header = req.headers[EPOCH_HEADER];
   const claimed = typeof header === 'string' ? Number(header) : Number.NaN;

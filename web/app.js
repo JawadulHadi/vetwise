@@ -645,6 +645,11 @@ function renderTraffic(state) {
 /** Public demos reseed on a timer; say so, so a visitor's edits vanishing is no surprise. */
 let latestDemoReset;
 
+/**
+ * Caches reset status and updates the notice using wall time. Hides it when
+ * status is absent; missing, invalid, or elapsed deadlines show an overdue or
+ * unknown status. Future deadlines are rounded up to whole minutes.
+ */
 function renderDemoReset(demo) {
   latestDemoReset = demo;
   if (!demo) {
@@ -661,6 +666,7 @@ function renderDemoReset(demo) {
   els.demoReset.hidden = false;
 }
 
+/** Renders household panels, the narrative clock, demo reset status, and agent details. */
 function renderState(state) {
   renderPets(state);
   renderTonight(state);
@@ -821,6 +827,11 @@ els.token.addEventListener('change', async () => {
   await refreshState();
 });
 
+/**
+ * Initializes identity, voice controls, and state, then starts a one-second reset
+ * countdown refresh and a 20-second state poll while idle. Initialization errors
+ * propagate, preventing the polling timers from being installed.
+ */
 async function boot() {
   els.token.value = ui.token;
   applyVoice();

@@ -25,6 +25,12 @@ export interface MintOptions {
   ttlMinutes?: number;
 }
 
+/**
+ * Persists a caller-bound action and payload, returning the raw confirmation
+ * token and its ISO expiry time. Only the token hash is stored; expired entries
+ * are removed. The lifetime defaults to 10 minutes of wall time, independent of
+ * the demo clock. Store mutation failures propagate to the caller.
+ */
 export async function mintConfirmation(store: Store, options: MintOptions): Promise<{ token: string; expiresAt: string }> {
   const token = `vw_${randomUUID().replaceAll('-', '')}`;
   // Wall time, not the demo clock: a frozen DEMO_CLOCK must never stop a
@@ -58,6 +64,10 @@ export interface ApplyOptions<T> {
  * Validate, apply, then mark used — all inside one serialised store mutation.
  * If `apply` throws, the in-memory database is restored from a snapshot and the
  * token stays usable.
+ * Returns the result of `apply`. Expiry is checked against wall time, including
+ * the exact expiry instant, independently of the demo clock.
+ * Rejects with ConfirmationError for an unknown, used, expired, wrong-action,
+ * or wrong-caller token. Callback and store mutation errors propagate.
  */
 export async function applyConfirmation<T>(store: Store, token: string, options: ApplyOptions<T>): Promise<T> {
   return store.mutate((db) => {

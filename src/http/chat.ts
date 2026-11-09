@@ -88,6 +88,13 @@ function contextFor(store: Store): ScriptedContext {
   });
 }
 
+/**
+ * Creates a handler that runs a chat turn through MCP as the bearer-token caller
+ * and retains that caller's session history. Rejects missing credentials (401),
+ * empty messages (400), and messages over 2,000 characters after trimming (413).
+ * Returns the agent reply and steps, or 409 if a reset made the result stale.
+ * MCP and agent errors are caught and converted to a generic 502 reply.
+ */
 export function chatHandler(store: Store) {
   return async (req: Request, res: Response): Promise<void> => {
     const record = tokenFromHeader(req.headers.authorization);
@@ -159,6 +166,11 @@ export function chatHandler(store: Store) {
   };
 }
 
+/**
+ * Creates a handler returning publishable household state, traffic, and agent
+ * details to a valid bearer-token caller; otherwise responds with 401. Includes
+ * the reset interval in minutes and next deadline only when demo resets are enabled.
+ */
 export function stateHandler(store: Store) {
   return (req: Request, res: Response): void => {
     if (!tokenFromHeader(req.headers.authorization)) {

@@ -28,7 +28,8 @@ export function clearTraffic(): void {
 
 /**
  * Records JSON-RPC method + tool name for the on-screen "MCP traffic" panel.
- * Every answer in the UI has a matching tools/call in this log.
+ * Adds completed responses newest first, retaining at most 80 entries. Requests
+ * with an unknown method or an epoch preceding the latest reset are omitted.
  */
 export function recordTraffic(req: AuthedRequest, res: Response, next: NextFunction): void {
   const startedAt = performance.now();

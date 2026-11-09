@@ -139,6 +139,11 @@ let resetTimer: NodeJS.Timeout | undefined;
 if (config.demoResetMinutes > 0) {
   const intervalMs = config.demoResetMinutes * 60_000;
   demoReset.minutes = config.demoResetMinutes;
+  /**
+   * Publishes a deadline and schedules a reset after delayMs milliseconds.
+   * Clears sessions and traffic after each attempt; retries failures within
+   * 30 seconds and marks the demo unavailable until a reset succeeds.
+   */
   const scheduleReset = (delayMs: number): void => {
     demoReset.nextAt = new Date(Date.now() + delayMs).toISOString();
     resetTimer = setTimeout(() => {
@@ -181,6 +186,11 @@ const server = app.listen(config.port, config.host, () => {
   void checkSelfCall();
 });
 
+/**
+ * Cancels the pending reset and closes MCP before closing HTTP and exiting.
+ * MCP close errors are ignored; after that close settles, a three-second
+ * timeout bounds the wait for HTTP shutdown.
+ */
 async function shutdown(signal: string): Promise<void> {
   console.log(`\n${signal} received — closing MCP handler and HTTP server.`);
   if (resetTimer) clearTimeout(resetTimer);

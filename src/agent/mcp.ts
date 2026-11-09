@@ -25,6 +25,10 @@ export interface ToolCallResult {
  * One short-lived MCP session per chat turn, authenticated with the same bearer
  * token the browser sent. The agent has no special access: it is just another
  * MCP client talking to the same Streamable HTTP endpoint a host would.
+ * Optional headers accompany requests; the supplied token sets Authorization.
+ * Returns the callback's result and propagates URL, connection, and callback
+ * errors. After a successful connection, closes the client even if the callback
+ * fails; close errors are ignored.
  */
 export async function withMcpClient<T>(
   options: { url: string; token: string; headers?: Record<string, string> },
