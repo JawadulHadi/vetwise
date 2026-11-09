@@ -81,12 +81,13 @@ try {
 
   const tools = await owner.listTools();
   const names = tools.tools.map((tool) => tool.name).sort();
-  assert.equal(names.length, 9, `expected 9 tools, saw ${names.join(', ')}`);
+  assert.equal(names.length, 10, `expected 10 tools, saw ${names.join(', ')}`);
   for (const required of [
     'get_household',
     'get_pet',
     'get_care_summary',
     'list_medications',
+    'list_exposures',
     'assess_toxin_exposure',
     'log_care_event',
     'propose_record_change',
@@ -191,6 +192,44 @@ try {
   assert.match(String(unknown.headline), /verif|catalogue/i);
   assert.match(String(unknown.summary), /not the same as safety|not reassuring|poison control|unverified/i);
   console.log('✓ assess unknown substance — unverified, never reassurance');
+
+  /* -------------------------------------------------------- exposure history */
+
+  const history = ok(
+    (await owner.callTool({ name: 'list_exposures', arguments: { pet: 'Mochi' } })) as StructuredToolResult,
+    'list_exposures',
+  );
+  const historyRows = history.exposures as Array<{ petName: string; toxinName: string; verdict: string; observedAt: string }>;
+  assert.equal(history.count, 3, `expected 3 Mochi exposures, saw ${history.count}`);
+  assert.equal(historyRows.length, 3);
+  assert.ok(historyRows.every((row) => row.petName === 'Mochi'), 'history leaked another pet');
+  const newest = historyRows[0];
+  assert.ok(newest, 'history returned no rows');
+  assert.equal(newest.toxinName, 'glitter glue', 'history is not newest first');
+  assert.ok(Date.parse(newest.observedAt) >= Date.parse(historyRows[1]!.observedAt));
+
+  const juniperHistory = ok(
+    (await owner.callTool({ name: 'list_exposures', arguments: { pet: 'Juniper' } })) as StructuredToolResult,
+    'list_exposures for Juniper',
+  );
+  assert.equal(juniperHistory.count, 2);
+  assert.equal((juniperHistory.exposures as Array<{ toxinName: string }>)[0]!.toxinName, 'Xylitol');
+
+  const emptyHistory = ok(
+    (await owner.callTool({ name: 'list_exposures', arguments: { pet: 'Juniper', day: '2020-01-01' } })) as StructuredToolResult,
+    'list_exposures filtered to an empty day',
+  );
+  assert.equal(emptyHistory.count, 0);
+  assert.equal(emptyHistory.day, '2020-01-01');
+  assert.doesNotMatch(String(emptyHistory.pet), /^$/);
+
+  const badDay = (await owner.callTool({
+    name: 'list_exposures',
+    arguments: { day: '2026-02-30' },
+  })) as StructuredToolResult;
+  assert.equal(badDay.isError, true);
+  assert.match(badDay.content?.[0]?.text ?? '', /real calendar date/i);
+  console.log('✓ list_exposures — pet filter, newest first, day filter and date validation');
 
   /* ------------------------------------------------------------- care write */
 

@@ -1,5 +1,5 @@
 import type { Client } from '@modelcontextprotocol/client';
-import { formatTime } from '../clock.js';
+import { formatTime, now, todayKey } from '../clock.js';
 import type { AmountUnit, ExposureAssessment, Symptom, Verdict } from '../domain/types.js';
 import { TOXINS } from '../domain/toxins.js';
 import { callTool, type AgentResult, type AgentStep } from './mcp.js';
@@ -73,6 +73,13 @@ const CONSIDERING = /\b(can|should|could|is it (ok|okay|safe)|would it be (ok|ok
 const HELP_WORDS = /\b(toxic|poison|danger|dangerous|risk|risky|bad for|safe for|harmful)\b/i;
 
 const ALERT_VERB = /\b(text|message|alert|notify|tell|remind)\b/i;
+
+/** "What did Mochi eat today?" — a read of the log, not a new assessment. */
+const EXPOSURE_HISTORY_SUBJECT = /\b(what|anything|which|history|exposures?)\b/i;
+const EXPOSURE_HISTORY_ACTIVITY =
+  /\b(ate|eaten|eat|eating|got into|gotten into|get into|swallowed|ingested|been into|exposure|exposures)\b/i;
+const EXPOSURE_HISTORY_TIME =
+  /\b(today|yesterday|last night|this week|this month|recently|so far|history|record|logged|log|list|show)\b/i;
 
 const STOP_WORDS = /\b(stop|stopped|discontinue|pause|paused|hold|resume|restart|start again|put .* back on)\b/i;
 
@@ -461,6 +468,51 @@ export async function runScriptedAgent(options: {
    * ---------------------------------------------------------------- */
   const toxin = toxinFrom(normalised);
   const exposureSignal = EXPOSURE_VERB.test(normalised) || (toxin && (CONSIDERING.test(normalised) || HELP_WORDS.test(normalised)));
+
+  /* ---------------------------------------------------------------- *
+   * 2a. Exposure history — "what did Mochi eat today?". Only the log
+   *     is read; a new exposure still goes to the safety engine.
+   * ---------------------------------------------------------------- */
+  if (
+    EXPOSURE_HISTORY_SUBJECT.test(normalised) &&
+    EXPOSURE_HISTORY_ACTIVITY.test(normalised) &&
+    EXPOSURE_HISTORY_TIME.test(normalised) &&
+    !(toxin && EXPOSURE_VERB.test(normalised))
+  ) {
+    const pet = petFrom(context, normalised);
+    const args: Record<string, unknown> = {};
+    if (pet) args.pet = pet.name;
+    if (/\btoday\b/i.test(normalised)) {
+      args.day = todayKey();
+    } else if (/\byesterday\b/i.test(normalised)) {
+      args.day = todayKey(new Date(now().getTime() - 86_400_000));
+    }
+
+    const result = await call('list_exposures', args);
+    if (!result.ok) return { reply: result.text, steps, provider: 'scripted' };
+
+    const history = result.structured as {
+      pet: string;
+      day?: string;
+      count: number;
+      exposures: Array<{ toxinName: string; verdict: string; observedAt: string }>;
+    };
+    const where = history.day ? ` on ${history.day}` : '';
+    if (history.count === 0) {
+      return {
+        reply: `No exposures are recorded for ${pet?.name ?? 'this household'}${where}. Nothing logged is not the same as nothing eaten.`,
+        steps,
+        provider: 'scripted',
+      };
+    }
+    return {
+      reply: `${history.pet} — ${history.count} recorded exposure${history.count === 1 ? '' : 's'}${where}: ${history.exposures
+        .map((entry) => `${formatTime(entry.observedAt)} ${entry.toxinName} (${entry.verdict})`)
+        .join('; ')}.`,
+      steps,
+      provider: 'scripted',
+    };
+  }
 
   if (toxin && exposureSignal) {
     const pet = petFrom(context, normalised) ?? (context.pets.length === 1 ? context.pets[0] : undefined);

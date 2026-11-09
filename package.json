@@ -5,7 +5,7 @@
   "description": "Vetwise — a household pet-safety MCP server that answers \"is this safe for my pet?\" with species- and weight-aware toxicosis math and cited veterinary sources.",
   "type": "module",
   "engines": {
-    "node": ">=22.9"
+    "node": ">=24.9"
   },
   "scripts": {
     "dev": "node --env-file-if-exists=.env --watch --import tsx src/index.ts",

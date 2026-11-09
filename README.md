@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="Licence: MIT" src="https://img.shields.io/badge/licence-MIT-8FE3BD"></a>
-  <img alt="Node 22 or 24" src="https://img.shields.io/badge/node-22%20%7C%2024-8FE3BD">
+  <img alt="Node 24 or 26" src="https://img.shields.io/badge/node-24%20%7C%2026-8FE3BD">
   <img alt="Tests: 17 unit + transport smoke" src="https://img.shields.io/badge/tests-17%20unit%20%2B%20smoke-8FE3BD">
   <a href="https://modelcontextprotocol.io"><img alt="MCP: Streamable HTTP" src="https://img.shields.io/badge/MCP-streamable%20HTTP-F2B45C"></a>
   <img alt="Release: v0.1.0" src="https://img.shields.io/badge/release-v0.1.0-F2705A">
@@ -57,7 +57,7 @@ The full scripted walkthrough is in [docs/DEMO.md](docs/DEMO.md).
 
 ## What is inside
 
-### 9 MCP tools
+### 10 MCP tools
 
 | Tool                    | Scope                      | What it does                                                 |
 | ----------------------- | -------------------------- | ------------------------------------------------------------ |
@@ -65,6 +65,7 @@ The full scripted walkthrough is in [docs/DEMO.md](docs/DEMO.md).
 | `get_pet`               | `read`                     | One pet, every medicine including stopped ones, today's care |
 | `get_care_summary`      | `read`                     | Taken / skipped / missed / due / upcoming for a day          |
 | `list_medications`      | `read`                     | Filter by pet; `status: "all"` really means all              |
+| `list_exposures`        | `read`                     | Recorded exposures, newest first; filter by pet and day      |
 | `assess_toxin_exposure` | `read` (+ `log` to record) | The safety engine: verdict, dose math, cited evidence        |
 | `log_care_event`        | `log`                      | Medication, symptom, weight or note; never guesses a slot    |
 | `propose_record_change` | `write`                    | Phase one: mint a single-use confirmation token              |
@@ -236,7 +237,7 @@ npm run check       # all four
 npm run dev         # tsx watch
 ```
 
-The smoke test starts its own server on port `8799` with a temporary data file, exercises all 9 tools, both identities, resources, prompts, single-use confirmations and the 401 gate, then removes its data. `npm run regress` boots a second server on `8811` and asserts the review fixes over real HTTP and MCP: hashed tokens, caller-bound sessions, `/healthz` minimalism, security headers, rate limiting, sanitised alert bodies, medication routes, id length, and the startup refusals.
+The smoke test starts its own server on port `8799` with a temporary data file, exercises all 10 tools, both identities, resources, prompts, single-use confirmations and the 401 gate, then removes its data. `npm run regress` boots a second server on `8811` and asserts the review fixes over real HTTP and MCP: hashed tokens, caller-bound sessions, `/healthz` minimalism, security headers, rate limiting, sanitised alert bodies, medication routes, id length, and the startup refusals.
 
 ---
 

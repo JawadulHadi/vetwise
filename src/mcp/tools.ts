@@ -250,6 +250,35 @@ const findingSchema = z.object({
   evidence: evidenceSchema,
 });
 
+const exposureViewSchema = z.object({
+  id: z.string(),
+  petId: z.string(),
+  petName: z.string(),
+  toxinId: z.string(),
+  toxinName: z.string(),
+  product: z.string().optional(),
+  amountValue: z.number().optional(),
+  amountUnit: amountUnitSchema.optional(),
+  observedAt: z.string(),
+  reportedAt: z.string(),
+  verdict: verdictSchema,
+  headline: z.string(),
+  dosePerKg: z.number().optional(),
+  doseUnit: z.string().optional(),
+  symptoms: z.array(symptomSchema),
+  status: z.enum(['reported', 'vet_contacted', 'resolved']),
+  note: z.string().optional(),
+  assessedBy: z.string(),
+});
+
+const exposureListSchema = z.object({
+  pet: z.string(),
+  day: z.string().optional(),
+  count: z.number(),
+  exposures: z.array(exposureViewSchema),
+  asOf: z.string(),
+});
+
 const assessmentSchema = z.object({
   pet: z.object({
     id: z.string().optional(),
@@ -411,6 +440,29 @@ function renderCareText(summary: CareSummary): string {
     }
   }
 
+  return lines.join('\n');
+}
+
+function renderExposureListText(summary: z.infer<typeof exposureListSchema>): string {
+  const scope = summary.day ? ` on ${summary.day}` : '';
+  if (summary.count === 0) {
+    return `No exposures are recorded for ${summary.pet}${scope}. That means nothing was logged, not that nothing happened — if a pet may have got into something now, ask for an assessment.`;
+  }
+
+  const lines = [
+    `${summary.pet} — ${summary.count} recorded exposure${summary.count === 1 ? '' : 's'}${scope}, newest first:`,
+  ];
+  for (const exposure of summary.exposures) {
+    const amount =
+      exposure.amountValue !== undefined && exposure.amountUnit
+        ? ` ${exposure.amountValue} ${exposure.amountUnit}`
+        : '';
+    const symptoms = exposure.symptoms.length > 0 ? ` Signs: ${exposure.symptoms.join(', ')}.` : '';
+    lines.push(
+      `- ${todayKey(new Date(exposure.observedAt))} ${formatTime(exposure.observedAt)}: ${exposure.toxinName}${amount} — ${exposure.verdict.toUpperCase()} (${exposure.headline}). Status: ${exposure.status}.${symptoms}`,
+    );
+  }
+  lines.push('', 'This is the logged history, not a new assessment. For a new or ongoing exposure, use assess_toxin_exposure.');
   return lines.join('\n');
 }
 
@@ -744,7 +796,59 @@ export function registerTools(server: McpServer, store: Store): void {
   );
 
   /* ---------------------------------------------------------------- *
-   * 5. assess_toxin_exposure
+   * 5. list_exposures
+   * ---------------------------------------------------------------- */
+  server.registerTool(
+    'list_exposures',
+    {
+      title: 'Exposure history',
+      description:
+        'List toxin exposures already on the household record, newest first. Use this for "what did Mochi eat today?" or "has Juniper got into anything this week?". Filter by pet and by calendar day. This reads the log only — it does not assess anything. A missing entry means nothing was logged, not that nothing happened, so never use an empty list as reassurance.',
+      annotations: { readOnlyHint: true, openWorldHint: false },
+      inputSchema: z.object({
+        pet: z.string().optional().describe('Optional pet name or id; omit for every pet'),
+        day: z.string().optional().describe('YYYY-MM-DD, defaults to every day on record'),
+        limit: z.number().int().min(1).max(50).optional().describe('Most recent entries to return; defaults to 20'),
+      }),
+      outputSchema: exposureListSchema,
+    },
+    async ({ pet: petNeedle, day, limit = 20 }, ctx: ServerContext) => {
+      try {
+        requireScope(ctx, SCOPES.read);
+        if (day !== undefined && !isDayKey(day)) {
+          throw new CareError(`“${day}” is not a real calendar date. Use YYYY-MM-DD, for example ${todayKey()}.`);
+        }
+
+        const data = store.read((db) => {
+          const pet = petNeedle ? requirePet(db, petNeedle) : undefined;
+          const exposures = db.exposures
+            .filter((exposure) => (pet ? exposure.petId === pet.id : true))
+            .filter((exposure) => (day ? todayKey(new Date(exposure.observedAt)) === day : true))
+            .sort((left, right) => Date.parse(right.observedAt) - Date.parse(left.observedAt))
+            .slice(0, limit)
+            .map((exposure) => ({
+              ...exposure,
+              petName: db.pets.find((entry) => entry.id === exposure.petId)?.name ?? 'Unknown pet',
+            }));
+
+          return {
+            pet: pet?.name ?? 'All pets',
+            ...(day ? { day } : {}),
+            count: exposures.length,
+            exposures,
+            asOf: now().toISOString(),
+          };
+        });
+
+        return { content: [{ type: 'text', text: renderExposureListText(data) }], structuredContent: data };
+      } catch (error) {
+        return toolError(error);
+      }
+    },
+  );
+
+  /* ---------------------------------------------------------------- *
+   * 6. assess_toxin_exposure
    * ---------------------------------------------------------------- */
   server.registerTool(
     'assess_toxin_exposure',
@@ -878,7 +982,7 @@ export function registerTools(server: McpServer, store: Store): void {
   );
 
   /* ---------------------------------------------------------------- *
-   * 6. log_care_event
+   * 7. log_care_event
    * ---------------------------------------------------------------- */
   server.registerTool(
     'log_care_event',
@@ -971,7 +1075,7 @@ export function registerTools(server: McpServer, store: Store): void {
   );
 
   /* ---------------------------------------------------------------- *
-   * 7. propose_record_change
+   * 8. propose_record_change
    * ---------------------------------------------------------------- */
   server.registerTool(
     'propose_record_change',
@@ -1097,7 +1201,7 @@ export function registerTools(server: McpServer, store: Store): void {
   );
 
   /* ---------------------------------------------------------------- *
-   * 8. apply_record_change
+   * 9. apply_record_change
    * ---------------------------------------------------------------- */
   const medicationRefPayload = z.object({
     petId: z.string(),
@@ -1250,7 +1354,7 @@ export function registerTools(server: McpServer, store: Store): void {
   );
 
   /* ---------------------------------------------------------------- *
-   * 9. alert_caregiver
+   * 10. alert_caregiver
    * ---------------------------------------------------------------- */
   server.registerTool(
     'alert_caregiver',

@@ -1,7 +1,7 @@
 # Vetwise — container image for a hosted demo or a self-hosted household.
 # The server runs TypeScript through tsx (no build step), so dev dependencies
 # are installed on purpose.
-FROM node:22-slim
+FROM node:24.22.1
 
 ENV NODE_ENV=development \
     HOST=0.0.0.0 \

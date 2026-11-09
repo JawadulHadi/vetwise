@@ -19,7 +19,7 @@ src/
 │  └─ seed.ts               demo household, medications, care logs
 ├─ mcp/
 │  ├─ server.ts             McpServer factory + server-level safety instructions
-│  ├─ tools.ts              all 9 tools, scopes, validation, persistence
+│  ├─ tools.ts              all 10 tools, scopes, validation, persistence
 │  ├─ resources.ts          6 resources
 │  ├─ prompts.ts            2 prompts
 │  └─ auth.ts               caller context, scope checks, publishable state
@@ -206,7 +206,7 @@ Voice input/output is browser-native (`SpeechRecognition`, `speechSynthesis`) an
 ## Testing
 
 - `tests/toxins.test.ts` — 17 unit tests: catalogue integrity, chocolate, xylitol, grapes, lilies, rodenticide/antifreeze, missing weight/species/amount/product, considering questions, symptom escalation, copy hygiene, rendering safety.
-- `tests/mcp-smoke.ts` — boots the real server on `8799` with a temp data file and drives it with `@modelcontextprotocol/client`: 9 tools, care summary, all-medication filtering, five assessments, logging, restricted alerts, owner-only write, single-use token, resources, prompts, sitter scopes, 401 gate.
+- `tests/mcp-smoke.ts` - boots the real server on `8799` with a temp data file and drives it with `@modelcontextprotocol/client`: 10 tools, care summary, all-medication filtering, five assessments, exposure history, logging, restricted alerts, owner-only write, single-use token, resources, prompts, sitter scopes, 401 gate.
 
 `npm run check` runs typecheck, unit tests and smoke.
 

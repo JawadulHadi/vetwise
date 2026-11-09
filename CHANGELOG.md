@@ -23,6 +23,10 @@ All notable changes to Vetwise are recorded here. The format follows
 - Resets are scheduled one after another, never stacked, and intervals longer
   than a Node timer can wait are refused at startup.
 - Regression tests for the reset, the fence, a failed reset, and the startup refusals.
+- `list_exposures` (10th tool, `read` scope): the logged toxin history, newest
+  first, optionally filtered by pet and calendar day. The scripted planner
+  answers "what did Mochi eat today?" from it. An empty list is reported as
+  "nothing logged", never as reassurance.
 
 ### Fixed
 
@@ -42,7 +46,7 @@ All notable changes to Vetwise are recorded here. The format follows
 
 ### Changed
 
-- Node floor raised to 22.9 for `--env-file-if-exists`.
+- Node floor raised to 24.9 (the container image uses `node:24.22.1`).
 
 ## [0.1.0] — 2026-11-08
 
