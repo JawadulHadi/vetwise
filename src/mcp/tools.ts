@@ -1077,7 +1077,7 @@ export function registerTools(server: McpServer, store: Store): void {
           '',
           `Read that back to ${callerLabel(caller.clientId)} and ask for an explicit yes.`,
           'If they say yes, call apply_record_change with the token from structuredContent — do not read the token aloud.',
-          `The code expires at ${new Date(expiresAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}.`,
+          `The code expires in ${Math.max(1, Math.round((Date.parse(expiresAt) - Date.now()) / 60_000))} minutes.`,
         ].join('\n');
 
         return {

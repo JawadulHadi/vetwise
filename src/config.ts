@@ -54,11 +54,33 @@ const sitterToken = resolveToken('SITTER_TOKEN', DEMO_TOKENS.sitter);
 const demoClock = parseClock(process.env.DEMO_CLOCK);
 if (demoClock && isProduction) {
   throw new Error(
-    'DEMO_CLOCK is set while NODE_ENV=production. A frozen clock breaks confirmation expiry and care-slot timing; unset it.',
+    'DEMO_CLOCK is set while NODE_ENV=production. A frozen clock breaks care-slot timing; unset it.',
   );
 }
 if (demoClock) {
   console.warn(`[vetwise] DEMO_CLOCK=${demoClock} — the clock is frozen. Never use this outside the demo.`);
+}
+
+/**
+ * Public-demo reset: when set, the household is reseeded every N minutes so a
+ * hosted demo that strangers can write to always returns to its story. It wipes
+ * the record, so it is refused under NODE_ENV=production.
+ */
+const rawReset = process.env.VETWISE_DEMO_RESET_MINUTES?.trim();
+const demoResetMinutes = rawReset ? Number(rawReset) : 0;
+if (rawReset && (!Number.isFinite(demoResetMinutes) || demoResetMinutes <= 0)) {
+  throw new Error(`VETWISE_DEMO_RESET_MINUTES must be a positive number of minutes, got "${rawReset}".`);
+}
+// setTimeout cannot wait longer than 2^31 - 1 ms (about 24.8 days); a longer
+// delay fires immediately, which would reseed the household in a tight loop.
+const MAX_RESET_MINUTES = Math.floor((2 ** 31 - 1) / 60_000);
+if (demoResetMinutes > MAX_RESET_MINUTES) {
+  throw new Error(`VETWISE_DEMO_RESET_MINUTES must be at most ${MAX_RESET_MINUTES} minutes, got "${rawReset}".`);
+}
+if (demoResetMinutes > 0 && isProduction) {
+  throw new Error(
+    'VETWISE_DEMO_RESET_MINUTES is set while NODE_ENV=production. The reset wipes the household record; it is for public demos only.',
+  );
 }
 
 const agentChoice = process.env.VETWISE_AGENT;
@@ -74,6 +96,7 @@ export const config = {
   publicBaseUrl: process.env.PUBLIC_BASE_URL ?? `http://${host === '0.0.0.0' ? '127.0.0.1' : host}:${port}`,
   dataFile: process.env.VETWISE_DATA ?? path.resolve('data/db.json'),
   demoClock,
+  demoResetMinutes,
   isProduction,
   demoMode: demoMode && demoTokensActive,
   allowedHosts: (process.env.ALLOWED_HOSTS ?? '')

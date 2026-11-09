@@ -3,6 +3,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Database } from '../domain/types.js';
 import { hashToken } from '../hash.js';
+import { advanceEpoch, currentEpoch, requestStartEpoch, StaleDemoRequestError } from '../http/fence.js';
 
 // Re-exported so existing importers keep one obvious entry point.
 export { hashToken };
@@ -73,6 +74,12 @@ export class Store {
     private state: Database,
   ) {}
 
+  /**
+   * Opens a JSON database, creating parent directories and seeding and saving a
+   * new record only when the file is absent. Rejects unreadable, malformed, or
+   * unexpected records rather than reseeding them. Directory creation, seeding,
+   * and persistence errors propagate.
+   */
   static async open(file: string, seed: (db: Database) => void | Promise<void>): Promise<Store> {
     await mkdir(path.dirname(file), { recursive: true });
 
@@ -85,7 +92,7 @@ export class Store {
       const state = emptyDatabase();
       await seed(state);
       const store = new Store(file, state);
-      await store.persist();
+      await store.persist(state);
       return store;
     }
 
@@ -117,22 +124,59 @@ export class Store {
     return this.version;
   }
 
+  /**
+   * Serializes a mutation of the live record, caps bounded collections, and saves
+   * before incrementing the revision and returning the mutator's result.
+   * Rejects with StaleDemoRequestError if the request's epoch is stale when its
+   * queued write starts. Mutator and persistence errors propagate; changes
+   * already made in memory are not rolled back by this method.
+   */
   mutate<T>(mutator: (db: Database) => T | Promise<T>): Promise<T> {
-    const run = this.queue.then(async () => {
+    // A write from a request that started before a public-demo reset must not
+    // land in the reseeded household. Checked when the write runs, not when it
+    // is queued, because a reset can be queued ahead of it.
+    const startedIn = requestStartEpoch();
+    return this.enqueue(async () => {
+      if (startedIn !== undefined && startedIn !== currentEpoch()) throw new StaleDemoRequestError();
       const result = await mutator(this.state);
       capCollections(this.state);
-      await this.persist();
+      await this.persist(this.state);
       this.version += 1;
       return result;
     });
-    // Keep the chain alive even if this mutation rejects.
+  }
+
+  /**
+   * Replaces the whole record with a freshly seeded one, through the same
+   * serialised queue as every other write. The new record is saved to disk
+   * before it replaces the live one, so a failed save leaves the running
+   * household exactly as it was. Used by the public-demo reset.
+   * A successful reset increments the revision and advances the request epoch.
+   * Seeding and persistence errors reject the returned promise.
+   */
+  reset(seed: (db: Database) => void | Promise<void>): Promise<void> {
+    return this.enqueue(async () => {
+      const fresh = emptyDatabase();
+      await seed(fresh);
+      await this.persist(fresh);
+      this.state = fresh;
+      this.version += 1;
+      advanceEpoch();
+    });
+  }
+
+  /** Runs one job after every job already queued, keeping the chain alive on failure. */
+  private enqueue<T>(job: () => Promise<T>): Promise<T> {
+    const run = this.queue.then(job);
     this.queue = run.catch(() => undefined);
     return run;
   }
 
-  private async persist(): Promise<void> {
+  /** Saves the supplied record by writing a temporary file and renaming it over
+   *  the data file. Serialization and filesystem errors propagate. */
+  private async persist(state: Database): Promise<void> {
     const temporary = `${this.file}.${process.pid}.tmp`;
-    await writeFile(temporary, `${JSON.stringify(this.state, null, 2)}\n`, 'utf8');
+    await writeFile(temporary, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
     await rename(temporary, this.file);
   }
 }

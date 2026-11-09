@@ -6,10 +6,11 @@ import express from 'express';
 import { agentMode, agentModel } from './agent/run.js';
 import { assertBedrockReady } from './agent/bedrock.js';
 import { config } from './config.js';
-import { chatHandler, stateHandler } from './http/chat.js';
+import { chatHandler, clearSessions, demoReset, stateHandler } from './http/chat.js';
 import { bearerAuth, optionalAuth } from './http/auth.js';
 import { rateLimit } from './http/limits.js';
-import { recordTraffic } from './http/traffic.js';
+import { fenceRequest } from './http/fence.js';
+import { clearTraffic, recordTraffic } from './http/traffic.js';
 import { createServerFactory } from './mcp/server.js';
 import { Store } from './store/store.js';
 import { seedDatabase } from './store/seed.js';
@@ -57,20 +58,36 @@ app.use((_req, res, next) => {
 // The MCP endpoint: bearer token → traffic log → Streamable HTTP handler.
 // Scopes are re-checked inside every tool, resource and prompt, so a token that
 // reaches this far still cannot write outside what it was granted.
-app.all('/mcp', bearerAuth, recordTraffic, (req, res) => {
+app.all('/mcp', demoInService, fenceRequest, bearerAuth, recordTraffic, (req, res) => {
   void nodeHandler(req, res, req.body);
 });
 
-// Liveness only. Version, agent mode and model are deliberately not public:
-// they fingerprint the deployment, and nothing needs them over the wire.
+// Reset failures share demoReset.failed with the timer and access guard.
+// Keep deployment details private while reporting cleanup readiness.
 app.get('/healthz', (_req, res) => {
+  if (demoReset.failed) {
+    res.status(503).json({ ok: false, time: new Date().toISOString() });
+    return;
+  }
   res.json({ ok: true, time: new Date().toISOString() });
 });
 
+// Include static demo access and identity requests in the cleanup guard.
+app.use(demoInService);
+
+/** While a failed public-demo reset is unresolved, the demo is out of service. */
+function demoInService(_req: express.Request, res: express.Response, next: express.NextFunction): void {
+  if (demoReset.failed) {
+    res.status(503).json({ error: 'The public demo is resetting. Try again in a minute.' });
+    return;
+  }
+  next();
+}
+
 // Each chat turn can cost several model calls, so the budget is per bearer
 // token rather than per IP: a shared office address does not pool its limit.
-app.post('/api/chat', rateLimit({ windowMs: 60_000, max: 20, scope: 'chat' }), chatHandler(store));
-app.get('/api/state', rateLimit({ windowMs: 60_000, max: 240, scope: 'state' }), stateHandler(store));
+app.post('/api/chat', demoInService, fenceRequest, rateLimit({ windowMs: 60_000, max: 20, scope: 'chat' }), chatHandler(store));
+app.get('/api/state', demoInService, rateLimit({ windowMs: 60_000, max: 240, scope: 'state' }), stateHandler(store));
 app.get('/api/whoami', optionalAuth, (req, res) => {
   // This reflects the token that was actually presented — never a hard-coded
   // or empty answer, so the simulator can always show who is speaking.
@@ -114,6 +131,46 @@ if (process.env.WEB_CONCURRENCY && Number(process.env.WEB_CONCURRENCY) > 1) {
 
 if (agentMode() === 'bedrock') await assertBedrockReady();
 
+// Public demo: reseed the household, and drop transcripts and the traffic log,
+// on a fixed interval so one visitor's changes never become the next one's story.
+// The next reset is scheduled only after this one has finished, so resets can
+// never pile up in the write queue ahead of visitors' writes.
+let resetTimer: NodeJS.Timeout | undefined;
+if (config.demoResetMinutes > 0) {
+  const intervalMs = config.demoResetMinutes * 60_000;
+  demoReset.minutes = config.demoResetMinutes;
+  /**
+   * Publishes a deadline and schedules a reset after delayMs milliseconds.
+   * Clears sessions and traffic after each attempt; retries failures within
+   * 30 seconds and marks the demo unavailable until a reset succeeds.
+   */
+  const scheduleReset = (delayMs: number): void => {
+    demoReset.nextAt = new Date(Date.now() + delayMs).toISOString();
+    resetTimer = setTimeout(() => {
+      store
+        .reset(seedDatabase)
+        .then(() => {
+          demoReset.failed = false;
+          console.log('[vetwise] public demo reset — household reseeded');
+        })
+        .catch((error: unknown) => {
+          // Out of service until a reset succeeds: /healthz reports 503 and the
+          // demo routes refuse, so no visitor sees state that was meant to be wiped.
+          demoReset.failed = true;
+          console.error('[vetwise] public demo reset failed; demo is out of service until a reset succeeds', error);
+        })
+        .finally(() => {
+          // Transcripts and traffic go either way; they are only ever in memory.
+          clearSessions();
+          clearTraffic();
+          scheduleReset(demoReset.failed ? Math.min(intervalMs, 30_000) : intervalMs);
+        });
+    }, delayMs);
+    resetTimer.unref();
+  };
+  scheduleReset(intervalMs);
+}
+
 const server = app.listen(config.port, config.host, () => {
   const url = `http://${config.host === '0.0.0.0' ? '127.0.0.1' : config.host}:${config.port}`;
   console.log(`Vetwise listening on ${url}`);
@@ -124,12 +181,19 @@ const server = app.listen(config.port, config.host, () => {
   if (config.demoClock) console.log(`  Demo clock     ${config.demoClock}`);
   console.log(`  Tokens         ${config.tokens.map((entry) => `${entry.label}: ${entry.tokenHint}`).join(' | ')}`);
   if (config.demoMode) console.log('  Credentials    published demo tokens (see .env.example)');
+  if (config.demoResetMinutes > 0) console.log(`  Demo reset     every ${config.demoResetMinutes} min`);
   // Checked after the socket is open: the endpoint is this same process.
   void checkSelfCall();
 });
 
+/**
+ * Cancels the pending reset and closes MCP before closing HTTP and exiting.
+ * MCP close errors are ignored; after that close settles, a three-second
+ * timeout bounds the wait for HTTP shutdown.
+ */
 async function shutdown(signal: string): Promise<void> {
   console.log(`\n${signal} received — closing MCP handler and HTTP server.`);
+  if (resetTimer) clearTimeout(resetTimer);
   await mcpHandler.close().catch(() => undefined);
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 3_000).unref();

@@ -22,6 +22,7 @@ const TOOL_HOT = new Set(['assess_toxin_exposure', 'apply_record_change', 'log_c
 const els = {
   clock: $('#clock'),
   clockNote: $('#clock-note'),
+  demoReset: $('#demo-reset'),
   token: $('#token-select'),
   mute: $('#mute'),
   muteIcon: $('#mute-icon'),
@@ -641,6 +642,31 @@ function renderTraffic(state) {
   }
 }
 
+/** Public demos reseed on a timer; say so, so a visitor's edits vanishing is no surprise. */
+let latestDemoReset;
+
+/**
+ * Caches reset status and updates the notice using wall time. Hides it when
+ * status is absent; missing, invalid, or elapsed deadlines show an overdue or
+ * unknown status. Future deadlines are rounded up to whole minutes.
+ */
+function renderDemoReset(demo) {
+  latestDemoReset = demo;
+  if (!demo) {
+    els.demoReset.hidden = true;
+    return;
+  }
+  const remaining = Date.parse(demo.nextResetAt) - Date.now();
+  const minutes = Math.ceil(remaining / 60_000);
+  els.demoReset.textContent =
+    !Number.isFinite(remaining) || remaining <= 0
+      ? 'Public demo · reset overdue or status unknown'
+      : minutes <= 1 ? 'Public demo · resets in under a minute' : `Public demo · resets in ${minutes} min`;
+  els.demoReset.title = `Shared demo household. Every change is wiped every ${demo.resetMinutes} minutes.`;
+  els.demoReset.hidden = false;
+}
+
+/** Renders household panels, the narrative clock, demo reset status, and agent details. */
 function renderState(state) {
   renderPets(state);
   renderTonight(state);
@@ -656,6 +682,8 @@ function renderState(state) {
       : date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     els.clockNote.textContent = weekday ? `${weekday} · demo` : 'demo clock';
   }
+
+  renderDemoReset(state.demo);
 
   if (state.agent) {
     els.badge.textContent =
@@ -799,12 +827,18 @@ els.token.addEventListener('change', async () => {
   await refreshState();
 });
 
+/**
+ * Initializes identity, voice controls, and state, then starts a one-second reset
+ * countdown refresh and a 20-second state poll while idle. Initialization errors
+ * propagate, preventing the polling timers from being installed.
+ */
 async function boot() {
   els.token.value = ui.token;
   applyVoice();
   setupRecognition();
   await loadIdentity({ reset: true });
   await refreshState();
+  setInterval(() => renderDemoReset(latestDemoReset), 1_000);
   setInterval(() => {
     if (!ui.busy) void refreshState();
   }, 20_000);

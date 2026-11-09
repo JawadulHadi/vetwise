@@ -7,6 +7,7 @@ import { owner, petName } from '../domain/care.js';
 import { publishableState } from '../mcp/auth.js';
 import type { Store } from '../store/store.js';
 import { listTraffic } from './traffic.js';
+import { currentEpoch, EPOCH_HEADER, requestStartEpoch } from './fence.js';
 import { rawTokenFromHeader, tokenFromHeader } from './auth.js';
 
 export interface ChatTurn {
@@ -20,6 +21,9 @@ interface Session {
   scripted: ScriptedState;
   touchedAt: number;
 }
+
+/** Set by the public-demo reset timer so the simulator can say when it resets. */
+export const demoReset: { minutes: number; nextAt?: string; failed?: boolean } = { minutes: 0 };
 
 const SESSION_TTL_MS = 30 * 60_000;
 const MAX_SESSIONS = 200;
@@ -37,6 +41,11 @@ function sweep(nowMs: number): void {
     if (oldest === undefined) break;
     sessions.delete(oldest);
   }
+}
+
+/** Drops every chat transcript; the public-demo reset calls this. */
+export function clearSessions(): void {
+  sessions.clear();
 }
 
 /**
@@ -79,6 +88,13 @@ function contextFor(store: Store): ScriptedContext {
   });
 }
 
+/**
+ * Creates a handler that runs a chat turn through MCP as the bearer-token caller
+ * and retains that caller's session history. Rejects missing credentials (401),
+ * empty messages (400), and messages over 2,000 characters after trimming (413).
+ * Returns the agent reply and steps, or 409 if a reset made the result stale.
+ * MCP and agent errors are caught and converted to a generic 502 reply.
+ */
 export function chatHandler(store: Store) {
   return async (req: Request, res: Response): Promise<void> => {
     const record = tokenFromHeader(req.headers.authorization);
@@ -100,9 +116,12 @@ export function chatHandler(store: Store) {
     }
 
     const session = sessionFor(record.clientId, body?.sessionId?.slice(0, 64) || 'default');
+    const startedIn = requestStartEpoch() ?? currentEpoch();
 
     try {
-      const result = await withMcpClient({ url: `${config.publicBaseUrl}/mcp`, token: rawToken }, (client) =>
+      const result = await withMcpClient(
+        { url: `${config.publicBaseUrl}/mcp`, token: rawToken, headers: { [EPOCH_HEADER]: String(startedIn) } },
+        (client) =>
         runAgent({
           client,
           message,
@@ -111,6 +130,16 @@ export function chatHandler(store: Store) {
           scriptedState: session.scripted,
         }),
       );
+
+      if (startedIn !== currentEpoch()) {
+        // The public demo reset mid-turn: its writes were refused and its
+        // session is gone, so the reply would describe a household that no longer exists.
+        res.status(409).json({
+          reply: 'The public demo just reset to its starting household. Please ask again.',
+          steps: [],
+        });
+        return;
+      }
 
       session.turns.push({ role: 'user', text: `${record.label}: ${message}` }, { role: 'assistant', text: result.reply });
       session.turns = session.turns.slice(-16);
@@ -137,6 +166,11 @@ export function chatHandler(store: Store) {
   };
 }
 
+/**
+ * Creates a handler returning publishable household state, traffic, and agent
+ * details to a valid bearer-token caller; otherwise responds with 401. Includes
+ * the reset interval in minutes and next deadline only when demo resets are enabled.
+ */
 export function stateHandler(store: Store) {
   return (req: Request, res: Response): void => {
     if (!tokenFromHeader(req.headers.authorization)) {
@@ -147,6 +181,7 @@ export function stateHandler(store: Store) {
       ...publishableState(store),
       traffic: listTraffic(),
       agent: { mode: agentMode(), model: agentModel() },
+      ...(demoReset.minutes > 0 ? { demo: { resetMinutes: demoReset.minutes, nextResetAt: demoReset.nextAt } } : {}),
     });
   };
 }

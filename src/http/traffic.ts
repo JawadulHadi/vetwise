@@ -1,5 +1,6 @@
 import type { NextFunction, Response } from 'express';
 import type { AuthedRequest } from './auth.js';
+import { currentEpoch, requestStartEpoch } from './fence.js';
 
 export interface TrafficEntry {
   id: number;
@@ -27,10 +28,12 @@ export function clearTraffic(): void {
 
 /**
  * Records JSON-RPC method + tool name for the on-screen "MCP traffic" panel.
- * Every answer in the UI has a matching tools/call in this log.
+ * Adds completed responses newest first, retaining at most 80 entries. Requests
+ * with an unknown method or an epoch preceding the latest reset are omitted.
  */
 export function recordTraffic(req: AuthedRequest, res: Response, next: NextFunction): void {
   const startedAt = performance.now();
+  const startedIn = requestStartEpoch() ?? currentEpoch();
   const body = req.body as { method?: string; params?: { name?: string; uri?: string } } | undefined;
   const method = body?.method ?? 'unknown';
   const entry: TrafficEntry = {
@@ -49,6 +52,7 @@ export function recordTraffic(req: AuthedRequest, res: Response, next: NextFunct
     entry.durationMs = Math.round(performance.now() - startedAt);
     entry.status = res.statusCode;
     if (method === 'unknown') return; // GET stream opens and bare probes are noise.
+    if (startedIn !== currentEpoch()) return; // started before a public-demo reset
     entries.unshift(entry);
     entries.length = Math.min(entries.length, MAX_ENTRIES);
   });
