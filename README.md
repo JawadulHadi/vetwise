@@ -18,6 +18,8 @@ Vetwise is built for the ten minutes after a pet eats something wrong: a dog int
 
 > Not veterinary advice. Vetwise names the veterinarian and poison-control numbers; it never advises treatment or inducing vomiting.
 
+**Try it live:** [vetwise-demo.onrender.com](https://vetwise-demo.onrender.com). The demo household resets every 30 minutes. It runs on Render's free plan, so the first request after a quiet spell can take up to a minute while the server wakes.
+
 ![The Vetwise simulator after a chocolate exposure escalates to an emergency: dose math, the published dose scale, the Merck citation, the call list, and the MCP traffic panel](docs/screenshots/demo.png)
 
 ---
@@ -179,6 +181,8 @@ Restart the server. Startup prints only the first four characters of each token,
 ## Deploy a public demo
 
 A hosted demo lets a buyer try every tool, writes included, from a link. Strangers will change the record, so a public demo turns on the reset: the household, chat transcripts and traffic panel are reseeded every `VETWISE_DEMO_RESET_MINUTES`, and the simulator shows a "Public demo · resets in N min" notice. Requests still running when a reset fires cannot write into the fresh household, and if a reset cannot be saved, `/healthz` answers 503 and the demo refuses requests until the next attempt succeeds.
+
+**Live demo:** <https://vetwise-demo.onrender.com>, deployed from `main` with the settings below (auto-deploys on every push).
 
 **Render (one click).** `render.yaml` describes a free Docker web service with the demo clock at 21:40 and a 30-minute reset. In Render choose *New → Blueprint*, pick this repository, and deploy.
 
