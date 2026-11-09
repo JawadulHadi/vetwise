@@ -158,6 +158,7 @@ The sitter has `read`, `log` and `notify`, so Noah can assess an exposure and te
 - The MCP endpoint rejects unknown `Host` headers when `ALLOWED_HOSTS` is set (DNS-rebinding protection).
 - `PUBLIC_BASE_URL` must be the URL the process can reach itself on; it is probed once after the listener opens, and a misconfiguration is reported at boot rather than per request.
 - Outside demo mode (`VETWISE_DEMO=0` or `NODE_ENV=production`) the process refuses to start without explicit `OWNER_TOKEN` and `SITTER_TOKEN`, and refuses the published demo strings.
+- `npm start` / `npm run dev` load `.env` when it exists (`--env-file-if-exists`). Generate a pair with `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"`, set both, restart, and paste the owner token into the simulator's **Paste a token…** option once. Startup logs only the first four characters.
 
 ### Sessions and limits
 

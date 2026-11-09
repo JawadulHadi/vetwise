@@ -202,6 +202,23 @@ input {
   cursor: pointer;
 }
 
+.identity .token-input {
+  min-width: 232px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong, var(--line));
+  background: var(--panel);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.identity .token-input[hidden] {
+  display: none;
+}
+
 .identity select:focus-visible,
 .ghost-button:focus-visible,
 button:focus-visible,
@@ -797,6 +814,24 @@ input:focus-visible {
   border-color: rgba(242, 178, 92, 0.45);
   background: var(--amber-soft);
   color: #f8d39b;
+}
+
+.scope-switch {
+  display: inline-block;
+  width: auto;
+  margin-top: 10px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(143, 227, 189, 0.38);
+  background: rgba(143, 227, 189, 0.1);
+  color: var(--mint);
+  font-size: 12px;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.scope-switch:hover {
+  background: rgba(143, 227, 189, 0.18);
 }
 
 /* ------------------------------------------------------------------ verdict */
@@ -1435,6 +1470,10 @@ input:focus-visible {
     flex: 1;
   }
   .identity select {
+    min-width: 0;
+    width: 100%;
+  }
+  .identity .token-input {
     min-width: 0;
     width: 100%;
   }

@@ -24,6 +24,7 @@ const els = {
   clockNote: $('#clock-note'),
   demoReset: $('#demo-reset'),
   token: $('#token-select'),
+  tokenInput: $('#token-input'),
   mute: $('#mute'),
   muteIcon: $('#mute-icon'),
   pets: $('#pets'),
@@ -140,6 +141,11 @@ async function api(path, options = {}) {
   });
   return response;
 }
+
+// Monotonic counters so a slow reply for an older token cannot land after a
+// newer one and repaint the header with the wrong identity.
+let identityEpoch = 0;
+let stateEpoch = 0;
 
 /* ------------------------------------------------------------------- voice */
 
@@ -695,13 +701,16 @@ function renderState(state) {
 }
 
 async function refreshState() {
-  const response = await api('/api/state');
+  const epoch = ++stateEpoch;
+  const response = await api('/api/state').catch(() => null);
+  if (!response || epoch !== stateEpoch) return null;
   if (response.status === 401) {
     els.badge.textContent = 'token rejected';
     return null;
   }
   if (!response.ok) return null;
   const state = await response.json();
+  if (epoch !== stateEpoch) return null;
   renderState(state);
   return state;
 }
@@ -734,9 +743,16 @@ function welcome(who) {
 }
 
 async function loadIdentity({ reset = false } = {}) {
-  localStorage.setItem('vetwise-token', ui.token);
-  const response = await api('/api/whoami');
-  const who = response.ok ? await response.json() : null;
+  const epoch = ++identityEpoch;
+  const token = ui.token;
+  localStorage.setItem('vetwise-token', token);
+  const response = await api('/api/whoami').catch(() => null);
+  // Switching tokens while a request is in flight must not let the old identity
+  // land last: `welcome()` clears the transcript, so a stale reply would wipe the
+  // new greeting and show the wrong scopes.
+  if (epoch !== identityEpoch || token !== ui.token) return;
+  const who = response?.ok ? await response.json() : null;
+  if (epoch !== identityEpoch || token !== ui.token) return;
   renderScopes(who?.scopes ?? []);
   if (reset) {
     ui.sessionId = newSessionId();
@@ -782,11 +798,29 @@ async function send(raw) {
     }
 
     const assessment = pickAssessment(data.steps);
-    appendTurn('assistant', data.reply, {
+    const turn = appendTurn('assistant', data.reply, {
       steps: data.steps ?? [],
       assessment,
       pending: data.pendingConfirmation,
     });
+    // The sitter token cannot write by design. When that is the reason for the
+    // refusal, offer the one action that fixes it instead of a dead end.
+    if (ui.token === 'noah-sitter-demo-token' && /missing the vetwise\.write scope/.test(String(data.reply))) {
+      const bubble = turn.querySelector('.bubble');
+      bubble?.append(
+        el('button', {
+          class: 'scope-switch',
+          type: 'button',
+          text: 'Switch to Maya Chen — owner',
+          onclick: async () => {
+            els.token.value = 'maya-owner-demo-token';
+            els.tokenInput.hidden = true;
+            await adoptToken('maya-owner-demo-token');
+            toast('Now signed in as Maya Chen — owner. Ask again.');
+          },
+        }),
+      );
+    }
     if (assessment) renderAssessmentPanel(assessment);
     speak(data.reply);
     await refreshState();
@@ -821,10 +855,49 @@ els.mute.addEventListener('click', () => {
   if (ui.voice) toast('Spoken replies on.');
 });
 
-els.token.addEventListener('change', async () => {
-  ui.token = els.token.value;
+const DEMO_TOKENS = new Set(['maya-owner-demo-token', 'noah-sitter-demo-token']);
+
+/** Apply a bearer token, persist it for the next visit, and reload the identity. */
+async function adoptToken(token) {
+  const value = String(token ?? '').trim();
+  if (!value) return;
+  ui.token = value;
+  localStorage.setItem('vetwise-token', value);
   await loadIdentity({ reset: true });
   await refreshState();
+}
+
+els.token.addEventListener('change', async () => {
+  if (els.token.value === '__custom') {
+    els.tokenInput.hidden = false;
+    els.tokenInput.value = DEMO_TOKENS.has(ui.token) ? '' : ui.token;
+    els.tokenInput.focus();
+    return;
+  }
+  els.tokenInput.hidden = true;
+  await adoptToken(els.token.value);
+});
+
+els.tokenInput.addEventListener('change', async () => {
+  const value = els.tokenInput.value.trim();
+  if (!value) {
+    // Cancelled: fall back to the demo identity that was in use.
+    els.tokenInput.hidden = true;
+    els.token.value = DEMO_TOKENS.has(ui.token) ? ui.token : 'maya-owner-demo-token';
+    return;
+  }
+  await adoptToken(value);
+});
+
+els.tokenInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    els.tokenInput.blur();
+  }
+  if (event.key === 'Escape') {
+    els.tokenInput.hidden = true;
+    els.token.value = DEMO_TOKENS.has(ui.token) ? ui.token : 'maya-owner-demo-token';
+  }
 });
 
 /**
@@ -833,7 +906,15 @@ els.token.addEventListener('change', async () => {
  * propagate, preventing the polling timers from being installed.
  */
 async function boot() {
-  els.token.value = ui.token;
+  if (DEMO_TOKENS.has(ui.token)) {
+    els.token.value = ui.token;
+  } else {
+    // A token generated outside demo mode: keep it, and expose it in the input
+    // so it can be replaced without clearing storage by hand.
+    els.token.value = '__custom';
+    els.tokenInput.hidden = false;
+    els.tokenInput.value = ui.token;
+  }
   applyVoice();
   setupRecognition();
   await loadIdentity({ reset: true });

@@ -40,16 +40,21 @@ function resolveToken(envName: 'OWNER_TOKEN' | 'SITTER_TOKEN', demoValue: string
         'Set OWNER_TOKEN and SITTER_TOKEN, or start with VETWISE_DEMO=1 for the local demo.',
     );
   }
-  console.warn(
-    `[vetwise] DEMO CREDENTIALS ACTIVE — ${envName} is unset, so the published demo token is in use. ` +
-      'Set OWNER_TOKEN/SITTER_TOKEN (or VETWISE_DEMO=0) before exposing this server.',
-  );
   return demoValue;
 }
 
-const demoTokensActive = !process.env.OWNER_TOKEN?.trim() || !process.env.SITTER_TOKEN?.trim();
 const ownerToken = resolveToken('OWNER_TOKEN', DEMO_TOKENS.owner);
 const sitterToken = resolveToken('SITTER_TOKEN', DEMO_TOKENS.sitter);
+
+// A published demo token is just as public when it was copied into `.env` as
+// when it is the fallback, so warn on the values rather than on unset vars.
+const demoTokensActive = ownerToken === DEMO_TOKENS.owner || sitterToken === DEMO_TOKENS.sitter;
+if (demoTokensActive) {
+  console.warn(
+    '[vetwise] DEMO CREDENTIALS ACTIVE - at least one published demo token is in use. ' +
+      'Set OWNER_TOKEN/SITTER_TOKEN to real secrets (and VETWISE_DEMO=0) before exposing this server.',
+  );
+}
 
 const demoClock = parseClock(process.env.DEMO_CLOCK);
 if (demoClock && isProduction) {

@@ -28,6 +28,18 @@ All notable changes to Vetwise are recorded here. The format follows
 
 - Confirmation tokens expire on wall time, so a frozen `DEMO_CLOCK` no longer
   keeps them valid indefinitely.
+- `npm start` and `npm run dev` load `.env` when it exists, so a generated
+  `OWNER_TOKEN`/`SITTER_TOKEN` actually takes effect.
+- The simulator accepts a generated token through **Paste a token…** and
+  remembers it; previously only the two demo tokens could be used.
+- A refused record change now offers a one-click **Switch to Maya Chen — owner**
+  action instead of leaving the sitter at a dead end.
+- Switching identity no longer races: a slow reply for the previous token cannot
+  repaint the header or wipe the new greeting.
+
+### Changed
+
+- Node floor raised to 22.9 for `--env-file-if-exists`.
 
 ## [0.1.0] — 2026-11-08
 

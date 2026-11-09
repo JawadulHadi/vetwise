@@ -53,7 +53,18 @@
             <select id="token-select">
               <option value="maya-owner-demo-token">Maya Chen — owner</option>
               <option value="noah-sitter-demo-token">Noah Patel — pet sitter</option>
+              <option value="__custom">Paste a token…</option>
             </select>
+            <input
+              id="token-input"
+              type="password"
+              class="token-input"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Bearer token"
+              aria-label="Paste a bearer token"
+              hidden
+            />
           </label>
           <button id="mute" class="ghost-button" type="button" aria-pressed="false" title="Toggle spoken replies">
             <span id="mute-icon">🔇</span><span class="sr-only">Toggle voice</span>

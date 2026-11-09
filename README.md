@@ -143,11 +143,35 @@ Copy `.env.example` to `.env`. The values that matter:
 | `CAREGIVER_WEBHOOK_URL` | empty                            | If set, alerts are POSTed and delivery is recorded                     |
 | `VETWISE_DEMO_RESET_MINUTES` | unset (off)                 | Public demos: reseed the household, transcripts and traffic every N minutes; refused when `NODE_ENV=production` |
 
-Run with an env file if you prefer:
+`npm start` and `npm run dev` load `.env` automatically when the file exists. Running the entry point by hand works too: `node --env-file=.env --import tsx src/index.ts`.
+
+### Tokens and write access
+
+The simulator's **Signed in as** picker switches identity. Both demo tokens are published on purpose and only work in demo mode:
+
+| Identity            | Token                    | Scopes                                      |
+| ------------------- | ------------------------ | ------------------------------------------- |
+| Maya Chen — owner   | `maya-owner-demo-token`  | `read`, `log`, `write`, `notify`            |
+| Noah Patel — sitter | `noah-sitter-demo-token` | `read`, `log`, `notify` (no record changes) |
+
+A record change sent as Noah is refused with *"This token is missing the `vetwise.write` scope"* — that is the safety model working. Switch the picker to **Maya Chen — owner**, or use the **Switch to Maya Chen — owner** button that appears on the refusal.
+
+**Generate real tokens** before exposing the server:
 
 ```bash
-node --env-file=.env --import tsx src/index.ts
+node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
+# run it twice: one for OWNER_TOKEN, one for SITTER_TOKEN
 ```
+
+Then in `.env`:
+
+```dotenv
+VETWISE_DEMO=0
+OWNER_TOKEN=<first value>
+SITTER_TOKEN=<second value>
+```
+
+Restart the server. Startup prints only the first four characters of each token, so keep the values somewhere safe. The UI knows the two demo tokens; for your own pair choose **Paste a token…** in the picker once and it is remembered in `localStorage` for that browser. `VETWISE_DEMO=0` (or `NODE_ENV=production`) makes the server refuse to start without both values, and it rejects the published demo strings.
 
 ---
 
