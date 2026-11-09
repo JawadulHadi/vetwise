@@ -22,7 +22,7 @@ interface Session {
 }
 
 /** Set by the public-demo reset timer so the simulator can say when it resets. */
-export const demoReset: { minutes: number; nextAt?: string } = { minutes: 0 };
+export const demoReset: { minutes: number; nextAt?: string; cleanupPending: boolean } = { minutes: 0, cleanupPending: false };
 
 const SESSION_TTL_MS = 30 * 60_000;
 const MAX_SESSIONS = 200;

@@ -643,14 +643,20 @@ function renderTraffic(state) {
 }
 
 /** Public demos reseed on a timer; say so, so a visitor's edits vanishing is no surprise. */
+let latestDemoReset;
+
 function renderDemoReset(demo) {
-  if (!demo?.nextResetAt) {
+  latestDemoReset = demo;
+  if (!demo) {
     els.demoReset.hidden = true;
     return;
   }
-  const minutes = Math.max(0, Math.ceil((Date.parse(demo.nextResetAt) - Date.now()) / 60_000));
+  const remaining = Date.parse(demo.nextResetAt) - Date.now();
+  const minutes = Math.ceil(remaining / 60_000);
   els.demoReset.textContent =
-    minutes <= 1 ? 'Public demo · resets in under a minute' : `Public demo · resets in ${minutes} min`;
+    !Number.isFinite(remaining) || remaining <= 0
+      ? 'Public demo · reset overdue or status unknown'
+      : minutes <= 1 ? 'Public demo · resets in under a minute' : `Public demo · resets in ${minutes} min`;
   els.demoReset.title = `Shared demo household. Every change is wiped every ${demo.resetMinutes} minutes.`;
   els.demoReset.hidden = false;
 }
@@ -821,6 +827,7 @@ async function boot() {
   setupRecognition();
   await loadIdentity({ reset: true });
   await refreshState();
+  setInterval(() => renderDemoReset(latestDemoReset), 1_000);
   setInterval(() => {
     if (!ui.busy) void refreshState();
   }, 20_000);

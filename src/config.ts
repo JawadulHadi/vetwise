@@ -54,7 +54,7 @@ const sitterToken = resolveToken('SITTER_TOKEN', DEMO_TOKENS.sitter);
 const demoClock = parseClock(process.env.DEMO_CLOCK);
 if (demoClock && isProduction) {
   throw new Error(
-    'DEMO_CLOCK is set while NODE_ENV=production. A frozen clock breaks confirmation expiry and care-slot timing; unset it.',
+    'DEMO_CLOCK is set while NODE_ENV=production. A frozen clock breaks care-slot timing; unset it.',
   );
 }
 if (demoClock) {
@@ -70,6 +70,9 @@ const rawReset = process.env.VETWISE_DEMO_RESET_MINUTES?.trim();
 const demoResetMinutes = rawReset ? Number(rawReset) : 0;
 if (rawReset && (!Number.isFinite(demoResetMinutes) || demoResetMinutes <= 0)) {
   throw new Error(`VETWISE_DEMO_RESET_MINUTES must be a positive number of minutes, got "${rawReset}".`);
+}
+if (demoResetMinutes * 60_000 > 2_147_483_647) {
+  throw new Error('VETWISE_DEMO_RESET_MINUTES exceeds Node’s maximum timer delay (2147483647 ms).');
 }
 if (demoResetMinutes > 0 && isProduction) {
   throw new Error(

@@ -27,7 +27,7 @@ export interface MintOptions {
 
 export async function mintConfirmation(store: Store, options: MintOptions): Promise<{ token: string; expiresAt: string }> {
   const token = `vw_${randomUUID().replaceAll('-', '')}`;
-  const createdAt = now();
+  const createdAt = new Date();
   const expiresAt = new Date(createdAt.getTime() + (options.ttlMinutes ?? 10) * 60_000).toISOString();
 
   await store.mutate((db) => {
@@ -69,14 +69,14 @@ export async function applyConfirmation<T>(store: Store, token: string, options:
     if (record.clientId !== options.clientId) {
       throw new ConfirmationError('That confirmation code belongs to a different caregiver.');
     }
-    if (new Date(record.expiresAt).getTime() < now().getTime()) {
+    if (new Date(record.expiresAt).getTime() <= Date.now()) {
       throw new ConfirmationError('That confirmation code has expired. Ask me to prepare the change again.');
     }
 
     const snapshot = structuredClone(db);
     try {
       const result = options.apply(db, record.payload, record.action);
-      record.usedAt = now().toISOString();
+      record.usedAt = new Date().toISOString();
       return result;
     } catch (error) {
       // No half-applied record changes: restore every nested object.

@@ -9,7 +9,7 @@
  */
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
@@ -359,6 +359,23 @@ try {
     assert.ok(reset, 'the public demo did not reseed the household');
     assert.match(demo.output(), /public demo reset/);
     console.log('✓ public demo reseeds the household on its timer and says when');
+
+    // Force the established write-then-rename persistence path to fail.
+    await rm(demoData);
+    await mkdir(demoData);
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      if (demo.output().includes('public demo reset failed')) break;
+      await sleep(100);
+    }
+    assert.match(demo.output(), /public demo reset failed/);
+    assert.equal((await fetch(`${demoBase}/healthz`)).status, 503);
+    for (const route of ['/', '/api/state', '/mcp']) {
+      assert.equal((await fetch(`${demoBase}${route}`)).status, 503, route);
+    }
+    await rm(demoData, { recursive: true });
+    await waitForHealth(demoBase);
+    assert.equal((await fetch(`${demoBase}/`)).status, 200);
+    console.log('✓ failed reset blocks health and demo access until persistence recovers');
   } finally {
     await demo.stop();
   }

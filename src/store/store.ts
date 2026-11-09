@@ -117,11 +117,14 @@ export class Store {
     return this.version;
   }
 
-  mutate<T>(mutator: (db: Database) => T | Promise<T>): Promise<T> {
+  // A replacement is private to this queued write until persistence succeeds.
+  mutate<T>(mutator: (db: Database) => T | Promise<T>, replacement?: Database): Promise<T> {
     const run = this.queue.then(async () => {
-      const result = await mutator(this.state);
-      capCollections(this.state);
-      await this.persist();
+      const staged = replacement ?? this.state;
+      const result = await mutator(staged);
+      capCollections(staged);
+      await this.persist(staged);
+      this.state = staged;
       this.version += 1;
       return result;
     });
@@ -136,16 +139,12 @@ export class Store {
    * hosted demo returns to its story without a restart.
    */
   reset(seed: (db: Database) => void | Promise<void>): Promise<void> {
-    return this.mutate(async (db) => {
-      const fresh = emptyDatabase();
-      await seed(fresh);
-      Object.assign(db, fresh);
-    });
+    return this.mutate(seed, emptyDatabase());
   }
 
-  private async persist(): Promise<void> {
+  private async persist(state: Database = this.state): Promise<void> {
     const temporary = `${this.file}.${process.pid}.tmp`;
-    await writeFile(temporary, `${JSON.stringify(this.state, null, 2)}\n`, 'utf8');
+    await writeFile(temporary, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
     await rename(temporary, this.file);
   }
 }

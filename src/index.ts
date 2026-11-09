@@ -54,17 +54,24 @@ app.use((_req, res, next) => {
   next();
 });
 
-// The MCP endpoint: bearer token → traffic log → Streamable HTTP handler.
-// Scopes are re-checked inside every tool, resource and prompt, so a token that
-// reaches this far still cannot write outside what it was granted.
-app.all('/mcp', bearerAuth, recordTraffic, (req, res) => {
-  void nodeHandler(req, res, req.body);
+// Reset cleanup status is shared with the timer below. Failed cleanup keeps
+// health and demo access unavailable until a later reset succeeds.
+app.get('/healthz', (_req, res) => {
+  const ok = !demoReset.cleanupPending;
+  res.status(ok ? 200 : 503).json({ ok, time: new Date().toISOString() });
+});
+app.use((_req, res, next) => {
+  if (demoReset.cleanupPending) {
+    res.status(503).json({ error: 'Demo cleanup is pending. Please try again later.' });
+    return;
+  }
+  next();
 });
 
-// Liveness only. Version, agent mode and model are deliberately not public:
-// they fingerprint the deployment, and nothing needs them over the wire.
-app.get('/healthz', (_req, res) => {
-  res.json({ ok: true, time: new Date().toISOString() });
+// The MCP endpoint: bearer token → traffic log → Streamable HTTP handler.
+// Scopes are re-checked inside every tool, resource and prompt.
+app.all('/mcp', bearerAuth, recordTraffic, (req, res) => {
+  void nodeHandler(req, res, req.body);
 });
 
 // Each chat turn can cost several model calls, so the budget is per bearer
@@ -121,16 +128,22 @@ if (config.demoResetMinutes > 0) {
   const intervalMs = config.demoResetMinutes * 60_000;
   demoReset.minutes = config.demoResetMinutes;
   demoReset.nextAt = new Date(Date.now() + intervalMs).toISOString();
+  let resetting = false;
   resetTimer = setInterval(() => {
-    demoReset.nextAt = new Date(Date.now() + intervalMs).toISOString();
+    if (resetting) return;
+    resetting = true;
+    demoReset.cleanupPending = true;
     store
       .reset(seedDatabase)
       .then(() => {
         clearSessions();
         clearTraffic();
+        demoReset.nextAt = new Date(Date.now() + intervalMs).toISOString();
+        demoReset.cleanupPending = false;
         console.log('[vetwise] public demo reset — household reseeded');
       })
-      .catch((error: unknown) => console.error('[vetwise] public demo reset failed', error));
+      .catch((error: unknown) => console.error('[vetwise] public demo reset failed', error))
+      .finally(() => { resetting = false; });
   }, intervalMs);
   resetTimer.unref();
 }

@@ -10,8 +10,6 @@ services:
     envVars:
       - key: VETWISE_DEMO
         value: "1"
-      - key: DEMO_CLOCK
-        value: "21:40"
       - key: VETWISE_DEMO_RESET_MINUTES
         value: "30"
       - key: VETWISE_AGENT
