@@ -71,7 +71,7 @@ These are non-negotiable and every milestone is judged against them.
 ### M2 — MCP surface · done
 
 - [x] Streamable HTTP transport at `/mcp`, bearer auth, host allow-list
-- [x] 9 tools with zod schemas and `structuredContent`
+- [x] 10 tools with zod schemas and `structuredContent`
 - [x] 6 resources (`household`, `pet`, `care`, `medications`, `toxins`, `toxin`)
 - [x] 2 prompts (`evening_check_in`, `something_my_pet_ate`)
 - [x] Scope checks inside every tool (`read`, `log`, `write`, `notify`)
@@ -94,7 +94,7 @@ These are non-negotiable and every milestone is judged against them.
 
 - [x] README, architecture, safety policy, toxin catalogue, demo script
 - [x] MIT licence, `CHANGELOG.md`, `PLAN.md`, issue/PR templates
-- [x] CI workflow: typecheck, unit tests, smoke test on Node 22 and 24
+- [x] CI workflow: typecheck, unit tests, smoke test on Node 24 and 26
 - [x] Logo and repository banner under `assets/`
 - [x] `v0.1.0` tag and GitHub release with notes
 
@@ -108,7 +108,6 @@ backlog, not surprises.
 | Gap | Impact | Next step |
 |---|---|---|
 | The scripted planner is a keyword router | Unusual phrasings fall back to a menu; "my dog is limping" is not a logged symptom | Broaden intent coverage, or default to Bedrock when credentials exist |
-| No exposure-history tool | "What did Mochi eat today?" cannot be answered over MCP | Add `list_exposures` (would make it 10 tools) |
 | No delete or edit tool | A record entry cannot be corrected from an MCP host | Add an owner-only `amend_care_event` with the same two-phase token |
 | One household per process | A second household needs a second deployment | Tenant id in the store and token record |
 | 24 toxins | Common but not exhaustive | Grow the catalogue with a citation per entry; keep the unknown path |
