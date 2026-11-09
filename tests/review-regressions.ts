@@ -312,6 +312,64 @@ try {
   }
 }
 
+/* ---------------------------------------------------------------- public demo */
+{
+  const demoPort = PORT + 6;
+  const demoBase = `http://127.0.0.1:${demoPort}`;
+  const demoData = path.join(directory, 'demo-db.json');
+  const demo = await startServer({
+    PORT: String(demoPort),
+    PUBLIC_BASE_URL: demoBase,
+    VETWISE_DATA: demoData,
+    DEMO_CLOCK: '21:40',
+    VETWISE_DEMO_RESET_MINUTES: '0.05', // 3 seconds
+  });
+  try {
+    await waitForHealth(demoBase);
+    const state = async () =>
+      (await (await fetch(`${demoBase}/api/state`, { headers: { Authorization: `Bearer ${OWNER}` } })).json()) as {
+        outbox: unknown[];
+        demo?: { resetMinutes: number; nextResetAt: string };
+      };
+    const before = await state();
+    assert.equal(before.demo?.resetMinutes, 0.05);
+    assert.ok(!Number.isNaN(Date.parse(before.demo!.nextResetAt)));
+
+    const client = new Client({ name: 'vetwise-regress-demo', version: '0.1.0' });
+    await client.connect(
+      new StreamableHTTPClientTransport(new URL(`${demoBase}/mcp`), {
+        requestInit: { headers: { Authorization: `Bearer ${OWNER}` } },
+      }),
+    );
+    ok(
+      (await client.callTool({
+        name: 'alert_caregiver',
+        arguments: { to: 'Maya', body: 'Public demo visitor change.' },
+      })) as StructuredToolResult,
+      'alert_caregiver on the public demo',
+    );
+    await client.close();
+    assert.equal((await state()).outbox.length, before.outbox.length + 1);
+
+    let reset = false;
+    for (let attempt = 0; attempt < 30 && !reset; attempt += 1) {
+      await sleep(250);
+      reset = (await state()).outbox.length === before.outbox.length;
+    }
+    assert.ok(reset, 'the public demo did not reseed the household');
+    assert.match(demo.output(), /public demo reset/);
+    console.log('✓ public demo reseeds the household on its timer and says when');
+  } finally {
+    await demo.stop();
+  }
+}
+await expectStartupFailure(
+  { NODE_ENV: 'production', VETWISE_DATA: dataFile, VETWISE_DEMO_RESET_MINUTES: '30' },
+  'VETWISE_DEMO_RESET_MINUTES is set while NODE_ENV=production',
+  'production refuses the public-demo reset',
+  PORT + 7,
+);
+
 /* ---------------------------------------------------------------- #2, #19, #22 */
 await expectStartupFailure(
   { NODE_ENV: 'production', OWNER_TOKEN: undefined, SITTER_TOKEN: undefined, VETWISE_DATA: dataFile },

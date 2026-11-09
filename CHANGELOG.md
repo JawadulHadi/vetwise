@@ -4,6 +4,19 @@ All notable changes to Vetwise are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Public-demo mode: `VETWISE_DEMO_RESET_MINUTES` reseeds the household, chat
+  transcripts and MCP traffic log on a timer, and the simulator shows when the
+  next reset happens. Refused under `NODE_ENV=production`.
+- `Dockerfile`, `.dockerignore` and a Render blueprint (`render.yaml`) for a
+  one-click hosted demo.
+- README sections on deploying a public demo and connecting Claude Code,
+  Claude Desktop or the MCP Inspector.
+- Regression tests for the reset and its production refusal.
+
 ## [0.1.0] — 2026-11-08
 
 First public cut: one household, dogs and cats, nine tools. The review hardening

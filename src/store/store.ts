@@ -130,6 +130,19 @@ export class Store {
     return run;
   }
 
+  /**
+   * Replaces the whole record with a freshly seeded one, through the same
+   * serialised queue as every other write. Used by the public-demo reset so a
+   * hosted demo returns to its story without a restart.
+   */
+  reset(seed: (db: Database) => void | Promise<void>): Promise<void> {
+    return this.mutate(async (db) => {
+      const fresh = emptyDatabase();
+      await seed(fresh);
+      Object.assign(db, fresh);
+    });
+  }
+
   private async persist(): Promise<void> {
     const temporary = `${this.file}.${process.pid}.tmp`;
     await writeFile(temporary, `${JSON.stringify(this.state, null, 2)}\n`, 'utf8');

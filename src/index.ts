@@ -6,10 +6,10 @@ import express from 'express';
 import { agentMode, agentModel } from './agent/run.js';
 import { assertBedrockReady } from './agent/bedrock.js';
 import { config } from './config.js';
-import { chatHandler, stateHandler } from './http/chat.js';
+import { chatHandler, clearSessions, demoReset, stateHandler } from './http/chat.js';
 import { bearerAuth, optionalAuth } from './http/auth.js';
 import { rateLimit } from './http/limits.js';
-import { recordTraffic } from './http/traffic.js';
+import { clearTraffic, recordTraffic } from './http/traffic.js';
 import { createServerFactory } from './mcp/server.js';
 import { Store } from './store/store.js';
 import { seedDatabase } from './store/seed.js';
@@ -114,6 +114,27 @@ if (process.env.WEB_CONCURRENCY && Number(process.env.WEB_CONCURRENCY) > 1) {
 
 if (agentMode() === 'bedrock') await assertBedrockReady();
 
+// Public demo: reseed the household, and drop transcripts and the traffic log,
+// on a fixed interval so one visitor's changes never become the next one's story.
+let resetTimer: NodeJS.Timeout | undefined;
+if (config.demoResetMinutes > 0) {
+  const intervalMs = config.demoResetMinutes * 60_000;
+  demoReset.minutes = config.demoResetMinutes;
+  demoReset.nextAt = new Date(Date.now() + intervalMs).toISOString();
+  resetTimer = setInterval(() => {
+    demoReset.nextAt = new Date(Date.now() + intervalMs).toISOString();
+    store
+      .reset(seedDatabase)
+      .then(() => {
+        clearSessions();
+        clearTraffic();
+        console.log('[vetwise] public demo reset — household reseeded');
+      })
+      .catch((error: unknown) => console.error('[vetwise] public demo reset failed', error));
+  }, intervalMs);
+  resetTimer.unref();
+}
+
 const server = app.listen(config.port, config.host, () => {
   const url = `http://${config.host === '0.0.0.0' ? '127.0.0.1' : config.host}:${config.port}`;
   console.log(`Vetwise listening on ${url}`);
@@ -124,12 +145,14 @@ const server = app.listen(config.port, config.host, () => {
   if (config.demoClock) console.log(`  Demo clock     ${config.demoClock}`);
   console.log(`  Tokens         ${config.tokens.map((entry) => `${entry.label}: ${entry.tokenHint}`).join(' | ')}`);
   if (config.demoMode) console.log('  Credentials    published demo tokens (see .env.example)');
+  if (config.demoResetMinutes > 0) console.log(`  Demo reset     every ${config.demoResetMinutes} min`);
   // Checked after the socket is open: the endpoint is this same process.
   void checkSelfCall();
 });
 
 async function shutdown(signal: string): Promise<void> {
   console.log(`\n${signal} received — closing MCP handler and HTTP server.`);
+  if (resetTimer) clearInterval(resetTimer);
   await mcpHandler.close().catch(() => undefined);
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 3_000).unref();

@@ -61,6 +61,22 @@ if (demoClock) {
   console.warn(`[vetwise] DEMO_CLOCK=${demoClock} — the clock is frozen. Never use this outside the demo.`);
 }
 
+/**
+ * Public-demo reset: when set, the household is reseeded every N minutes so a
+ * hosted demo that strangers can write to always returns to its story. It wipes
+ * the record, so it is refused under NODE_ENV=production.
+ */
+const rawReset = process.env.VETWISE_DEMO_RESET_MINUTES?.trim();
+const demoResetMinutes = rawReset ? Number(rawReset) : 0;
+if (rawReset && (!Number.isFinite(demoResetMinutes) || demoResetMinutes <= 0)) {
+  throw new Error(`VETWISE_DEMO_RESET_MINUTES must be a positive number of minutes, got "${rawReset}".`);
+}
+if (demoResetMinutes > 0 && isProduction) {
+  throw new Error(
+    'VETWISE_DEMO_RESET_MINUTES is set while NODE_ENV=production. The reset wipes the household record; it is for public demos only.',
+  );
+}
+
 const agentChoice = process.env.VETWISE_AGENT;
 if (agentChoice === 'bedrock' && !process.env.BEDROCK_MODEL_ID?.trim()) {
   throw new Error(
@@ -74,6 +90,7 @@ export const config = {
   publicBaseUrl: process.env.PUBLIC_BASE_URL ?? `http://${host === '0.0.0.0' ? '127.0.0.1' : host}:${port}`,
   dataFile: process.env.VETWISE_DATA ?? path.resolve('data/db.json'),
   demoClock,
+  demoResetMinutes,
   isProduction,
   demoMode: demoMode && demoTokensActive,
   allowedHosts: (process.env.ALLOWED_HOSTS ?? '')

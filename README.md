@@ -141,12 +141,63 @@ Copy `.env.example` to `.env`. The values that matter:
 | `BEDROCK_MODEL_ID`      | `amazon.nova-lite-v1:0`          | Required when `VETWISE_AGENT=bedrock`                                  |
 | `ALLOWED_HOSTS`         | empty                            | Required behind a tunnel; prevents DNS rebinding                       |
 | `CAREGIVER_WEBHOOK_URL` | empty                            | If set, alerts are POSTed and delivery is recorded                     |
+| `VETWISE_DEMO_RESET_MINUTES` | unset (off)                 | Public demos: reseed the household, transcripts and traffic every N minutes; refused when `NODE_ENV=production` |
 
 Run with an env file if you prefer:
 
 ```bash
 node --env-file=.env --import tsx src/index.ts
 ```
+
+---
+
+## Deploy a public demo
+
+A hosted demo lets a buyer try every tool, writes included, from a link. Strangers will change the record, so a public demo turns on the reset: the household, chat transcripts and traffic panel are reseeded every `VETWISE_DEMO_RESET_MINUTES`, and the simulator shows a "Public demo · resets in N min" notice.
+
+**Render (one click).** `render.yaml` describes a free Docker web service with the demo clock at 21:40 and a 30-minute reset. In Render choose *New → Blueprint*, pick this repository, and deploy.
+
+**Any container host.**
+
+```bash
+docker build -t vetwise .
+docker run -p 3000:3000 -e DEMO_CLOCK=21:40 -e VETWISE_DEMO_RESET_MINUTES=30 vetwise
+```
+
+The image binds `0.0.0.0`, runs the scripted planner, keeps its data in `/app/data` (mount a volume to keep a real household), and has a `/healthz` health check. Render and similar hosts set `PORT`; the server's self-call follows it.
+
+A public demo runs on the published demo tokens. For a real household, set `NODE_ENV=production`, `OWNER_TOKEN` and `SITTER_TOKEN`, and leave `DEMO_CLOCK` and `VETWISE_DEMO_RESET_MINUTES` unset; the server refuses to start otherwise.
+
+---
+
+## Connect from an MCP client
+
+The server speaks Streamable HTTP at `/mcp` with a bearer token. Replace the URL with your deployment and the token with the owner or sitter token.
+
+**Claude Code**
+
+```bash
+claude mcp add --transport http vetwise https://your-host/mcp \
+  --header "Authorization: Bearer maya-owner-demo-token"
+```
+
+**Claude Desktop** (through the `mcp-remote` bridge, in `claude_desktop_config.json`)
+
+```json
+{
+  "mcpServers": {
+    "vetwise": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://your-host/mcp", "--header", "Authorization:${VETWISE_AUTH}"],
+      "env": { "VETWISE_AUTH": "Bearer maya-owner-demo-token" }
+    }
+  }
+}
+```
+
+**MCP Inspector**: `npx @modelcontextprotocol/inspector`, transport *Streamable HTTP*, URL `https://your-host/mcp`, header `Authorization: Bearer …`.
+
+Then ask the host "Mochi ate half a bar of dark chocolate" and watch the same tools the simulator uses.
 
 ---
 

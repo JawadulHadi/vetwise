@@ -22,6 +22,7 @@ const TOOL_HOT = new Set(['assess_toxin_exposure', 'apply_record_change', 'log_c
 const els = {
   clock: $('#clock'),
   clockNote: $('#clock-note'),
+  demoReset: $('#demo-reset'),
   token: $('#token-select'),
   mute: $('#mute'),
   muteIcon: $('#mute-icon'),
@@ -641,6 +642,19 @@ function renderTraffic(state) {
   }
 }
 
+/** Public demos reseed on a timer; say so, so a visitor's edits vanishing is no surprise. */
+function renderDemoReset(demo) {
+  if (!demo?.nextResetAt) {
+    els.demoReset.hidden = true;
+    return;
+  }
+  const minutes = Math.max(0, Math.ceil((Date.parse(demo.nextResetAt) - Date.now()) / 60_000));
+  els.demoReset.textContent =
+    minutes <= 1 ? 'Public demo · resets in under a minute' : `Public demo · resets in ${minutes} min`;
+  els.demoReset.title = `Shared demo household. Every change is wiped every ${demo.resetMinutes} minutes.`;
+  els.demoReset.hidden = false;
+}
+
 function renderState(state) {
   renderPets(state);
   renderTonight(state);
@@ -656,6 +670,8 @@ function renderState(state) {
       : date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     els.clockNote.textContent = weekday ? `${weekday} · demo` : 'demo clock';
   }
+
+  renderDemoReset(state.demo);
 
   if (state.agent) {
     els.badge.textContent =

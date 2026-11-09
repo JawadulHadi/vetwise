@@ -21,6 +21,9 @@ interface Session {
   touchedAt: number;
 }
 
+/** Set by the public-demo reset timer so the simulator can say when it resets. */
+export const demoReset: { minutes: number; nextAt?: string } = { minutes: 0 };
+
 const SESSION_TTL_MS = 30 * 60_000;
 const MAX_SESSIONS = 200;
 
@@ -37,6 +40,11 @@ function sweep(nowMs: number): void {
     if (oldest === undefined) break;
     sessions.delete(oldest);
   }
+}
+
+/** Drops every chat transcript; the public-demo reset calls this. */
+export function clearSessions(): void {
+  sessions.clear();
 }
 
 /**
@@ -147,6 +155,7 @@ export function stateHandler(store: Store) {
       ...publishableState(store),
       traffic: listTraffic(),
       agent: { mode: agentMode(), model: agentModel() },
+      ...(demoReset.minutes > 0 ? { demo: { resetMinutes: demoReset.minutes, nextResetAt: demoReset.nextAt } } : {}),
     });
   };
 }

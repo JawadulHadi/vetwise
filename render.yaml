@@ -1,0 +1,18 @@
+# One-click public demo on Render: https://render.com/deploy
+# The demo household reseeds every 30 minutes, so strangers can try every tool,
+# including writes, without leaving a mess for the next visitor.
+services:
+  - type: web
+    name: vetwise-demo
+    runtime: docker
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - key: VETWISE_DEMO
+        value: "1"
+      - key: DEMO_CLOCK
+        value: "21:40"
+      - key: VETWISE_DEMO_RESET_MINUTES
+        value: "30"
+      - key: VETWISE_AGENT
+        value: scripted
