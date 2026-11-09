@@ -26,6 +26,7 @@ const child = spawn(process.execPath, ['--import', 'tsx', 'src/index.ts'], {
   env: {
     ...process.env,
     PORT: String(PORT),
+    PUBLIC_BASE_URL: BASE, // never inherit an ambient value pointing at another port
     VETWISE_DATA: dataFile,
     DEMO_CLOCK: '21:40',
     VETWISE_AGENT: 'scripted',

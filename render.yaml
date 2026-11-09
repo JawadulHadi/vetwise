@@ -3,7 +3,7 @@
 # including writes, without leaving a mess for the next visitor.
 services:
   - type: web
-    name: vetwise-demo
+    name: vetwise
     runtime: docker
     plan: free
     healthCheckPath: /healthz

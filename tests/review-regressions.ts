@@ -30,7 +30,15 @@ async function startServer(env: Record<string, string | undefined>): Promise<{
   exited: Promise<void>;
 }> {
   const childEnv: Record<string, string> = { ...(process.env as Record<string, string>) };
+  // Start from a clean slate: ambient demo settings (a frozen clock, a reset
+  // timer, a bedrock model) must not change which startup check fires first.
+  for (const key of ['DEMO_CLOCK', 'VETWISE_DEMO_RESET_MINUTES', 'BEDROCK_MODEL_ID', 'NODE_ENV', 'VETWISE_DEMO']) {
+    delete childEnv[key];
+  }
   childEnv.VETWISE_AGENT = 'scripted';
+  // Default to this child's own address so an ambient PUBLIC_BASE_URL (for
+  // example one copied from .env) cannot send /api/chat to another port.
+  childEnv.PUBLIC_BASE_URL = `http://127.0.0.1:${env.PORT ?? PORT}`;
   childEnv.OWNER_TOKEN = OWNER;
   childEnv.SITTER_TOKEN = SITTER;
   for (const [key, value] of Object.entries(env)) {

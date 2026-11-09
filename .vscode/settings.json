@@ -8,6 +8,9 @@
         "methylxanthines",
         "Mochi's",
         "serialised",
+        "Streamable",
         "Vetwise"
-    ]
+    ],
+    "python.terminal.useEnvFile": true,
+    "python-envs.defaultEnvManager": "ms-python.python:system"
 }

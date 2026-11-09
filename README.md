@@ -18,7 +18,7 @@ Vetwise is built for the ten minutes after a pet eats something wrong: a dog int
 
 > Not veterinary advice. Vetwise names the veterinarian and poison-control numbers; it never advises treatment or inducing vomiting.
 
-**Try it live:** [vetwise-demo.onrender.com](https://vetwise-demo.onrender.com). The demo household resets every 30 minutes. It runs on Render's free plan, so the first request after a quiet spell can take up to a minute while the server wakes.
+**Try it live:** [VetWise](https://vetwise.onrender.com). The demo household resets every 30 minutes. It runs on Render's free plan, so the first request after a quiet spell can take up to a minute while the server wakes.
 
 ![The Vetwise simulator after a chocolate exposure escalates to an emergency: dose math, the published dose scale, the Merck citation, the call list, and the MCP traffic panel](docs/screenshots/demo.png)
 
@@ -96,7 +96,7 @@ Foods, plants, human medicines, pesticides and household products. Every entry c
 
 ## How a request flows
 
-```
+```markdown
 browser / host
    │  Bearer token
    ▼
@@ -131,20 +131,20 @@ Both paths call the same MCP tools over the same transport. The UI badge says wh
 
 Copy `.env.example` to `.env`. The values that matter:
 
-| Variable                | Default                          | Purpose                                                                |
-| ----------------------- | -------------------------------- | ---------------------------------------------------------------------- |
-| `PORT` / `HOST`         | `3000` / `127.0.0.1`             | HTTP listener                                                          |
-| `PUBLIC_BASE_URL`       | `http://127.0.0.1:3000`          | URL the simulator uses to reach its own `/mcp`                         |
-| `VETWISE_DATA`          | `./data/db.json`                 | JSON store; delete to reseed the demo                                  |
-| `DEMO_CLOCK`            | unset (real time)                | `21:40` freezes the demo narrative; refused when `NODE_ENV=production` |
-| `OWNER_TOKEN`           | demo token when `VETWISE_DEMO`   | Owner bearer token — required outside demo mode                        |
-| `SITTER_TOKEN`          | demo token when `VETWISE_DEMO`   | Sitter bearer token — required outside demo mode                       |
-| `VETWISE_DEMO`          | `1` unless `NODE_ENV=production` | Allow the published demo tokens; set `0` to require real ones          |
-| `VETWISE_AGENT`         | `scripted` when no credentials   | `scripted` or `bedrock`                                                |
-| `BEDROCK_MODEL_ID`      | `amazon.nova-lite-v1:0`          | Required when `VETWISE_AGENT=bedrock`                                  |
-| `ALLOWED_HOSTS`         | empty                            | Required behind a tunnel; prevents DNS rebinding                       |
-| `CAREGIVER_WEBHOOK_URL` | empty                            | If set, alerts are POSTed and delivery is recorded                     |
-| `VETWISE_DEMO_RESET_MINUTES` | unset (off)                 | Public demos: reseed the household, transcripts and traffic every N minutes; refused when `NODE_ENV=production` |
+| Variable                     | Default                          | Purpose                                                                                                         |
+| ---------------------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `PORT` / `HOST`              | `3000` / `127.0.0.1`             | HTTP listener                                                                                                   |
+| `PUBLIC_BASE_URL`            | `http://127.0.0.1:3000`          | URL the simulator uses to reach its own `/mcp`                                                                  |
+| `VETWISE_DATA`               | `./data/db.json`                 | JSON store; delete to reseed the demo                                                                           |
+| `DEMO_CLOCK`                 | unset (real time)                | `21:40` freezes the demo narrative; refused when `NODE_ENV=production`                                          |
+| `OWNER_TOKEN`                | demo token when `VETWISE_DEMO`   | Owner bearer token — required outside demo mode                                                                 |
+| `SITTER_TOKEN`               | demo token when `VETWISE_DEMO`   | Sitter bearer token — required outside demo mode                                                                |
+| `VETWISE_DEMO`               | `1` unless `NODE_ENV=production` | Allow the published demo tokens; set `0` to require real ones                                                   |
+| `VETWISE_AGENT`              | `scripted` when no credentials   | `scripted` or `bedrock`                                                                                         |
+| `BEDROCK_MODEL_ID`           | `amazon.nova-lite-v1:0`          | Required when `VETWISE_AGENT=bedrock`                                                                           |
+| `ALLOWED_HOSTS`              | empty                            | Required behind a tunnel; prevents DNS rebinding                                                                |
+| `CAREGIVER_WEBHOOK_URL`      | empty                            | If set, alerts are POSTed and delivery is recorded                                                              |
+| `VETWISE_DEMO_RESET_MINUTES` | unset (off)                      | Public demos: reseed the household, transcripts and traffic every N minutes; refused when `NODE_ENV=production` |
 
 `npm start` and `npm run dev` load `.env` automatically when the file exists. Running the entry point by hand works too: `node --env-file=.env --import tsx src/index.ts`.
 
@@ -182,7 +182,7 @@ Restart the server. Startup prints only the first four characters of each token,
 
 A hosted demo lets a buyer try every tool, writes included, from a link. Strangers will change the record, so a public demo turns on the reset: the household, chat transcripts and traffic panel are reseeded every `VETWISE_DEMO_RESET_MINUTES`, and the simulator shows a "Public demo · resets in N min" notice. Requests still running when a reset fires cannot write into the fresh household, and if a reset cannot be saved, `/healthz` answers 503 and the demo refuses requests until the next attempt succeeds.
 
-**Live demo:** <https://vetwise-demo.onrender.com>, deployed from `main` with the settings below (auto-deploys on every push).
+**Live demo:** <https://vetwise.onrender.com>, deployed from `main` with the settings below (auto-deploys on every push).
 
 **Render (one click).** `render.yaml` describes a free Docker web service with the demo clock at 21:40 and a 30-minute reset. In Render choose *New → Blueprint*, pick this repository, and deploy.
 
