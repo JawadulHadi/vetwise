@@ -4,7 +4,7 @@ import { registerPrompts } from './prompts.js';
 import { registerResources } from './resources.js';
 import { registerTools } from './tools.js';
 
-export const SERVER_INFO = { name: 'vetwise', version: '0.1.0' } as const;
+export const SERVER_INFO = { name: 'vetwise', version: '0.2.0' } as const;
 
 /**
  * Server-level instructions. A host puts these in the model's system prompt, so

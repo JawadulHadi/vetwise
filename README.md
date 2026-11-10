@@ -7,7 +7,7 @@
   <img alt="Node 24 or 26" src="https://img.shields.io/badge/node-24%20%7C%2026-8FE3BD">
   <img alt="Tests: 17 unit + transport smoke" src="https://img.shields.io/badge/tests-17%20unit%20%2B%20smoke-8FE3BD">
   <a href="https://modelcontextprotocol.io"><img alt="MCP: Streamable HTTP" src="https://img.shields.io/badge/MCP-streamable%20HTTP-F2B45C"></a>
-  <img alt="Release: v0.1.0" src="https://img.shields.io/badge/release-v0.1.0-F2705A">
+  <img alt="Release: v0.2.0" src="https://img.shields.io/badge/release-v0.2.0-F2705A">
 </p>
 
 # Vetwise
@@ -269,6 +269,20 @@ The smoke test starts its own server on port `8799` with a temporary data file, 
 - No treatment advice, no induced vomiting, no therapeutic dosing. Ever.
 
 `no_known_toxicity` exists as a verdict but is currently unreachable for the 24 catalogued toxins: every published band starts at 0 and resolves to `monitor` or higher. It is documented as reserved rather than used to manufacture false reassurance. See [docs/SAFETY.md](docs/SAFETY.md).
+
+---
+
+## Deliberately not included
+
+Vetwise is sized for one household on one process. These are decisions, not a backlog:
+
+- **No accounts, OAuth or SSO.** Two bearer tokens — owner and sitter — express the only two roles this record needs. The token is the identity.
+- **No multi-tenant database.** One serialised JSON file, written atomically. A second household should be a second deployment; a shared Postgres would add tenancy, migrations and backups without making any safety answer better.
+- **No admin console or password reset.** Change the tokens in `.env` and restart.
+- **No diagnosis, treatment or dosing.** The engine triages and names a veterinarian or poison-control number. It never says what to give or to induce vomiting.
+- **No deletion or in-place editing.** From outside, the record is append-only; corrections go through the owner and the two-phase confirmation.
+
+Revisit the first two only if a second household needs the same instance, or real records are hosted for other people. That is a v2 architecture decision, not a missing feature.
 
 ---
 

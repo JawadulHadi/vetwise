@@ -1,6 +1,6 @@
 {
   "name": "vetwise",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Vetwise — a household pet-safety MCP server that answers \"is this safe for my pet?\" with species- and weight-aware toxicosis math and cited veterinary sources.",
   "type": "module",

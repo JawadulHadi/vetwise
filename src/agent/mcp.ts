@@ -34,7 +34,7 @@ export async function withMcpClient<T>(
   options: { url: string; token: string; headers?: Record<string, string> },
   fn: (client: Client) => Promise<T>,
 ): Promise<T> {
-  const client = new Client({ name: 'vetwise-household-simulator', version: '0.1.0' });
+  const client = new Client({ name: 'vetwise-household-simulator', version: '0.2.0' });
   const transport = new StreamableHTTPClientTransport(new URL(options.url), {
     requestInit: { headers: { ...options.headers, Authorization: `Bearer ${options.token}` } },
   });
