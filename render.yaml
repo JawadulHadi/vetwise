@@ -3,7 +3,9 @@
 # including writes, without leaving a mess for the next visitor.
 services:
   - type: web
-    name: vetwise
+    # Render subdomains are global, and `vetwise` is already claimed by another
+    # account, so the service keeps the `vetwise-demo` name that owns this URL.
+    name: vetwise-demo
     runtime: docker
     plan: free
     healthCheckPath: /healthz
